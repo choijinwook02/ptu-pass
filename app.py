@@ -282,9 +282,9 @@ def get_practical_benefit():
 def get_department_leaderboard():
     return jsonify({
         "departments": [
-            {"rank": 1, "dept": "융합모빌리티공학부", "participants": 218, "total_points": 482500, "avg_wait_saved": "15.2분"},
+            {"rank": 1, "dept": "융합소프트웨어학과", "participants": 218, "total_points": 482500, "avg_wait_saved": "15.2분"},
             {"rank": 2, "dept": "정보통신학과", "participants": 195, "total_points": 451200, "avg_wait_saved": "14.5분"},
-            {"rank": 3, "dept": "컴퓨터소프트웨어학과", "participants": 184, "total_points": 398000, "avg_wait_saved": "13.8분"},
+            {"rank": 3, "dept": "스마트모빌리티학과", "participants": 184, "total_points": 398000, "avg_wait_saved": "13.8분"},
             {"rank": 4, "dept": "국제물류학과", "participants": 156, "total_points": 342100, "avg_wait_saved": "12.9분"},
             {"rank": 5, "dept": "간호학과", "participants": 142, "total_points": 289400, "avg_wait_saved": "11.5분"}
         ]
