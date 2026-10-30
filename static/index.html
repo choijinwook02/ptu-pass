@@ -2,9 +2,9 @@
 <html lang="ko" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PTU 통학 마일리지 패스 - 평택대학교 스마트 모빌리티</title>
-  <!-- 폰트 & 아이콘 CDN -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PTU 통학 마일리지 패스</title>
+  <!-- 아이콘 및 폰트 CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <!-- 오픈소스 지도 Leaflet CSS & JS -->
@@ -12,11 +12,11 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    /* ================= 테마 시스템 (라이트 & 다크 모드) ================= */
+    /* ================= 테마 변수 (라이트 & 다크 모드) ================= */
     :root {
       --bg: #f8fafc;
-      --card-bg: rgba(255, 255, 255, 0.85);
-      --card-border: rgba(226, 232, 240, 0.8);
+      --card-bg: rgba(255, 255, 255, 0.9);
+      --card-border: rgba(226, 232, 240, 0.85);
       --text-main: #0f172a;
       --text-muted: #64748b;
       --primary: #2563eb;
@@ -24,15 +24,15 @@
       --accent: #0ea5e9;
       --success: #10b981;
       --danger: #ef4444;
-      --nav-bg: rgba(255, 255, 255, 0.85);
-      --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 0 1px 1px rgba(0,0,0,0.02);
+      --nav-bg: rgba(255, 255, 255, 0.92);
+      --card-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.05);
       --glow: 0 0 20px rgba(59, 130, 246, 0.35);
       --map-filter: none;
     }
 
     [data-theme="dark"] {
       --bg: #090d16;
-      --card-bg: rgba(17, 24, 39, 0.75);
+      --card-bg: rgba(17, 24, 39, 0.85);
       --card-border: rgba(56, 189, 248, 0.2);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
@@ -41,158 +41,164 @@
       --accent: #38bdf8;
       --success: #34d399;
       --danger: #f87171;
-      --nav-bg: rgba(11, 15, 25, 0.85);
-      --card-shadow: 0 10px 35px -5px rgba(0, 0, 0, 0.6), 0 0 15px rgba(56, 189, 248, 0.1);
+      --nav-bg: rgba(11, 15, 25, 0.92);
+      --card-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.6);
       --glow: 0 0 25px rgba(56, 189, 248, 0.45);
       --map-filter: brightness(0.65) invert(1) contrast(2.8) hue-rotate(205deg) saturate(0.35) brightness(0.85);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease; }
-    body { background-color: var(--bg); color: var(--text-main); min-height: 100vh; padding-bottom: 60px; overflow-x: hidden; position: relative; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease; }
+    body { background-color: var(--bg); color: var(--text-main); min-height: 100vh; padding-bottom: 90px; overflow-x: hidden; position: relative; }
 
-    /* 미래지향적 배경 오로라 이펙트 */
+    /* 배경 오로라 이펙트 */
     body::before {
-      content: ''; position: fixed; top: -150px; left: 50%; transform: translateX(-50%);
-      width: 800px; height: 500px; background: radial-gradient(circle, rgba(59,130,246,0.18) 0%, rgba(14,165,233,0.08) 50%, transparent 80%);
+      content: ''; position: fixed; top: -120px; left: 50%; transform: translateX(-50%);
+      width: 700px; height: 450px; background: radial-gradient(circle, rgba(59,130,246,0.18) 0%, rgba(14,165,233,0.06) 50%, transparent 80%);
       filter: blur(80px); pointer-events: none; z-index: 0;
     }
 
-    /* 상단 블러 글래스 네비게이션 */
+    /* 상단 헤더 */
     header {
       background: var(--nav-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--card-border); position: sticky; top: 0; z-index: 1000;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.03);
     }
-    .nav-container { max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; }
-    .logo { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 900; color: var(--text-main); cursor: pointer; letter-spacing: -0.5px; }
+    .nav-container { max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; }
+    .logo { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 900; color: var(--text-main); cursor: pointer; }
     .logo-icon {
-      width: 38px; height: 38px; border-radius: 10px; background: var(--primary-gradient);
-      display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;
-      box-shadow: 0 4px 12px rgba(37,99,235,0.3); animation: pulseGlow 3s infinite alternate;
+      width: 34px; height: 34px; border-radius: 10px; background: var(--primary-gradient);
+      display: flex; align-items: center; justify-content: center; color: white; font-size: 16px;
+      box-shadow: 0 4px 10px rgba(37,99,235,0.3);
     }
     
+    /* PC 상단 메뉴 */
     .nav-links { display: flex; gap: 6px; list-style: none; }
     .nav-item {
-      padding: 8px 16px; border-radius: 10px; font-size: 14px; font-weight: 700; color: var(--text-muted);
-      cursor: pointer; transition: all 0.25s ease; position: relative;
+      padding: 8px 14px; border-radius: 10px; font-size: 14px; font-weight: 700; color: var(--text-muted);
+      cursor: pointer; transition: all 0.2s ease;
     }
     .nav-item:hover { color: var(--text-main); background: rgba(125,125,125,0.08); }
     .nav-item.active { color: white; background: var(--primary-gradient); box-shadow: var(--glow); }
 
-    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
     .header-wallet {
-      display: flex; align-items: center; gap: 8px; background: rgba(59,130,246,0.1); border: 1px solid var(--card-border);
-      padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 800; color: var(--text-main); cursor: pointer;
+      display: flex; align-items: center; gap: 6px; background: rgba(59,130,246,0.1); border: 1px solid var(--card-border);
+      padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 800; color: var(--text-main); cursor: pointer;
     }
-    
-    /* 다크모드 토글 스위치 버튼 */
     .theme-toggle {
       background: rgba(125,125,125,0.1); border: 1px solid var(--card-border); color: var(--text-main);
-      width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      cursor: pointer; font-size: 17px; transition: transform 0.3s ease, background 0.2s;
+      width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 15px; transition: transform 0.2s;
     }
-    .theme-toggle:hover { transform: rotate(25deg) scale(1.08); background: rgba(59,130,246,0.2); }
+
+    /* ================= 스마트폰 전용 하단 앱 네비게이션 독 ================= */
+    .mobile-bottom-nav {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+      background: var(--nav-bg); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      border-top: 1px solid var(--card-border); padding: 8px 10px env(safe-area-inset-bottom, 10px);
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+    }
+    .mobile-nav-list { display: flex; justify-content: space-around; list-style: none; }
+    .m-nav-item {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; padding: 6px 12px; border-radius: 10px; color: var(--text-muted); font-size: 11px;
+      font-weight: 700; cursor: pointer; flex: 1; text-align: center;
+    }
+    .m-nav-item i { font-size: 18px; }
+    .m-nav-item.active { color: var(--primary); font-weight: 800; }
+    .m-nav-item.active i { transform: scale(1.15); color: var(--primary); }
 
     /* 메인 컨테이너 */
-    .container { max-width: 1080px; margin: 24px auto; padding: 0 16px; position: relative; z-index: 1; }
+    .container { max-width: 1080px; margin: 18px auto; padding: 0 16px; position: relative; z-index: 1; }
     .tab-content { display: none; }
-    .tab-content.active { display: block; animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+    .tab-content.active { display: block; animation: slideUp 0.3s ease; }
 
-    /* 글래스모피즘 카드 */
+    /* 글래스 카드 */
     .card {
       background: var(--card-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      border: 1px solid var(--card-border); border-radius: 20px; padding: 24px; box-shadow: var(--card-shadow);
-      margin-bottom: 24px; position: relative; overflow: hidden;
+      border: 1px solid var(--card-border); border-radius: 18px; padding: 20px; box-shadow: var(--card-shadow);
+      margin-bottom: 20px; position: relative; overflow: hidden;
     }
-    .card-title { font-size: 17px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .card-title { font-size: 16px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 
-    /* 지도 영역 & 다크 필터 */
-    #map { width: 100%; height: 340px; border-radius: 16px; border: 1px solid var(--card-border); margin-bottom: 16px; z-index: 10; box-shadow: inset 0 2px 10px rgba(0,0,0,0.1); }
-    .leaflet-tile { filter: var(--map-filter); transition: filter 0.4s ease; }
+    /* 지도 영역 */
+    #map { width: 100%; height: 300px; border-radius: 14px; border: 1px solid var(--card-border); margin-bottom: 14px; z-index: 10; }
+    .leaflet-tile { filter: var(--map-filter); transition: filter 0.3s ease; }
 
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } .nav-links { display: none; } }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 
-    /* 홀로그램 마일리지 카드 */
+    /* 모바일 반응형 브레이크포인트 */
+    @media (max-width: 768px) {
+      .grid-2 { grid-template-columns: 1fr; gap: 16px; }
+      .nav-links { display: none; } /* 모바일에서는 상단 대신 하단 앱 바로 전환 */
+      .mobile-bottom-nav { display: block; } /* 하단 네비게이션 노출 */
+      #map { height: 250px; }
+      body { padding-bottom: 100px; } /* 하단 네비게이션 공간 확보 */
+      .card { padding: 16px; }
+      .wallet-val { font-size: 30px !important; }
+    }
+
+    /* 지갑 카드 */
     .wallet-card-holo {
-      background: var(--primary-gradient); border-radius: 18px; padding: 24px; color: white;
-      box-shadow: 0 15px 35px -5px rgba(37,99,235,0.4), var(--glow); position: relative; overflow: hidden; margin-bottom: 16px;
+      background: var(--primary-gradient); border-radius: 16px; padding: 20px; color: white;
+      box-shadow: 0 12px 30px -4px rgba(37,99,235,0.4), var(--glow); position: relative; overflow: hidden; margin-bottom: 14px;
     }
-    .wallet-card-holo::after {
-      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-      background: linear-gradient(60deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%);
-      transform: rotate(25deg); animation: holoSheen 6s infinite; pointer-events: none;
-    }
-    .wallet-val { font-size: 38px; font-weight: 900; letter-spacing: -1px; display: flex; align-items: baseline; gap: 6px; }
-    .wallet-val span { font-size: 20px; font-weight: 700; opacity: 0.9; }
+    .wallet-val { font-size: 34px; font-weight: 900; letter-spacing: -0.5px; display: flex; align-items: baseline; gap: 6px; }
+    .wallet-val span { font-size: 18px; font-weight: 700; opacity: 0.9; }
 
-    /* 센서 현황 HUD 패널 */
+    /* HUD 센서 패널 */
     .hud-panel {
-      background: rgba(0,0,0,0.03); border: 1px solid var(--card-border); border-radius: 14px; padding: 16px; margin-bottom: 16px;
+      background: rgba(0,0,0,0.03); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px; margin-bottom: 14px;
     }
     [data-theme="dark"] .hud-panel { background: rgba(255,255,255,0.02); }
-    .hud-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
+    .hud-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
     .hud-row:last-child { margin-bottom: 0; }
     .hud-label { color: var(--text-muted); font-weight: 600; }
     .hud-val { font-weight: 800; color: var(--text-main); }
 
-    /* 고감도 사이버 버튼군 */
+    /* 버튼 스타일 */
     .cyber-btn {
-      width: 100%; border: none; padding: 15px; border-radius: 12px; font-size: 14px; font-weight: 800;
+      width: 100%; border: none; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 800;
       cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); margin-bottom: 10px; position: relative; overflow: hidden;
+      transition: all 0.2s ease; margin-bottom: 8px;
     }
-    .cyber-btn:hover { transform: translateY(-2px); }
-    .cyber-btn:active { transform: translateY(1px); }
-    
-    .btn-gps { background: #0f172a; color: white; box-shadow: 0 4px 15px rgba(15,23,42,0.2); }
+    .cyber-btn:active { transform: scale(0.98); }
+    .btn-gps { background: #0f172a; color: white; }
     [data-theme="dark"] .btn-gps { background: #1e293b; border: 1px solid #334155; }
     .btn-transit { background: rgba(14,165,233,0.12); color: #0284c7; border: 1px solid rgba(14,165,233,0.3); }
     [data-theme="dark"] .btn-transit { color: #38bdf8; background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3); }
-    .btn-verify {
-      background: var(--primary-gradient); color: white; box-shadow: 0 6px 20px rgba(37,99,235,0.35); font-size: 15px;
-    }
-    .btn-verify:hover { box-shadow: var(--glow); }
+    .btn-verify { background: var(--primary-gradient); color: white; box-shadow: 0 4px 16px rgba(37,99,235,0.35); font-size: 15px; }
 
-    /* 검증 피드백 박스 */
-    .alert-panel {
-      margin-top: 16px; padding: 18px; border-radius: 14px; font-size: 13px; display: none; line-height: 1.6;
-      animation: slideUp 0.3s ease; backdrop-filter: blur(10px);
-    }
+    /* 알림창 */
+    .alert-panel { margin-top: 14px; padding: 16px; border-radius: 12px; font-size: 13px; display: none; line-height: 1.5; }
     .alert-success { background: rgba(16,185,129,0.12); border: 1.5px solid var(--success); color: var(--success); }
     .alert-danger { background: rgba(239,68,68,0.12); border: 1.5px solid var(--danger); color: var(--danger); }
 
-    /* 테이블 스타일 */
+    /* 테이블 */
     .table-responsive { width: 100%; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
-    th { background: rgba(0,0,0,0.02); padding: 14px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--card-border); }
-    td { padding: 16px 14px; border-bottom: 1px solid var(--card-border); color: var(--text-main); }
-    .tag { display: inline-block; padding: 5px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.3px; }
-    .tag-success { background: rgba(16,185,129,0.15); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
-    .tag-danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+    th { background: rgba(0,0,0,0.02); padding: 12px 14px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--card-border); }
+    td { padding: 14px; border-bottom: 1px solid var(--card-border); color: var(--text-main); }
+    .tag { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; }
+    .tag-success { background: rgba(16,185,129,0.15); color: var(--success); }
+    .tag-danger { background: rgba(239,68,68,0.15); color: var(--danger); }
 
-    /* 네온 쇼핑 카드 */
-    .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    /* 교내 사용처 그리드 */
+    .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 12px; }
     .shop-card {
-      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 26px;
-      text-align: center; transition: all 0.3s ease; box-shadow: var(--card-shadow);
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px;
+      text-align: center; box-shadow: var(--card-shadow);
     }
-    .shop-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: var(--glow); }
     .shop-icon-wrap {
-      width: 64px; height: 64px; border-radius: 16px; background: rgba(59,130,246,0.12); color: var(--primary);
-      display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 16px;
-      border: 1px solid rgba(59,130,246,0.2);
+      width: 56px; height: 56px; border-radius: 14px; background: rgba(59,130,246,0.12); color: var(--primary);
+      display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 12px;
     }
     .btn-exchange {
       width: 100%; background: var(--text-main); color: var(--bg); border: none; padding: 12px; border-radius: 10px;
-      font-size: 14px; font-weight: 800; cursor: pointer; transition: all 0.2s;
+      font-size: 14px; font-weight: 800; cursor: pointer;
     }
-    .btn-exchange:hover { opacity: 0.9; }
 
-    /* 애니메이션 키프레임 */
-    @keyframes slideUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes pulseGlow { 0% { box-shadow: 0 0 10px rgba(59,130,246,0.3); } 100% { box-shadow: 0 0 25px rgba(6,182,212,0.6); } }
-    @keyframes holoSheen { 0% { transform: translateX(-150%) rotate(25deg); } 100% { transform: translateX(150%) rotate(25deg); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
@@ -205,6 +211,7 @@
         <span>PTU Commute Pass</span>
       </div>
 
+      <!-- PC 화면 전용 네비게이션 메뉴 -->
       <ul class="nav-links">
         <li class="nav-item active" onclick="switchTab('commute')"><i class="fa-solid fa-crosshairs"></i> 통학 인증</li>
         <li class="nav-item" onclick="switchTab('wallet')"><i class="fa-solid fa-wallet"></i> 마일리지 지갑</li>
@@ -217,7 +224,6 @@
           <i class="fa-solid fa-coins" style="color: #f59e0b;"></i>
           <span id="navBalance">7,500 P</span>
         </div>
-        <!-- 다크모드 원클릭 토글 버튼 -->
         <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()" title="화면 모드 전환">
           <i class="fa-solid fa-moon"></i>
         </button>
@@ -225,37 +231,59 @@
     </div>
   </header>
 
+  <!-- ================= 스마트폰 전용 하단 고정 탭 바 ================= -->
+  <nav class="mobile-bottom-nav">
+    <ul class="mobile-nav-list">
+      <li class="m-nav-item active" onclick="switchTab('commute')">
+        <i class="fa-solid fa-location-crosshairs"></i>
+        <span>통학인증</span>
+      </li>
+      <li class="m-nav-item" onclick="switchTab('wallet')">
+        <i class="fa-solid fa-wallet"></i>
+        <span>지갑관리</span>
+      </li>
+      <li class="m-nav-item" onclick="switchTab('shop')">
+        <i class="fa-solid fa-gift"></i>
+        <span>교내사용처</span>
+      </li>
+      <li class="m-nav-item" onclick="switchTab('guide')">
+        <i class="fa-solid fa-circle-question"></i>
+        <span>이용안내</span>
+      </li>
+    </ul>
+  </nav>
+
   <div class="container">
 
     <!-- ================= 1. 실시간 GPS 통학 인증 탭 ================= -->
     <div id="tab-commute" class="tab-content active">
       
-      <!-- 네온 인터랙티브 지도 -->
+      <!-- 지도 위젯 -->
       <div class="card">
         <div class="card-title">
-          <span><i class="fa-solid fa-map-location-dot" style="color: var(--primary); margin-right: 8px;"></i> 실시간 GPS 통학 경로 관제 지도</span>
-          <span style="font-size: 12px; color: var(--success); font-weight: 700;">
-            <i class="fa-solid fa-signal"></i> 위성 센서 정상 연동
+          <span><i class="fa-solid fa-map-location-dot" style="color: var(--primary); margin-right: 6px;"></i> 실시간 GPS 통학 관제 지도</span>
+          <span style="font-size: 11px; color: var(--success); font-weight: 700;">
+            <i class="fa-solid fa-satellite"></i> 위성 센서 정상 연동
           </span>
         </div>
         <div id="map"></div>
-        <div style="font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; font-weight: 600;">
-          <span><i class="fa-solid fa-location-dot" style="color: #2563eb;"></i> 파란 마커: 내 현재 GPS 위치</span>
-          <span><i class="fa-solid fa-flag-checkered" style="color: #ef4444;"></i> 빨간 마커: 평택대학교 정문</span>
+        <div style="font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; font-weight: 600;">
+          <span>📍 파란 마커: 내 현재 GPS 위치</span>
+          <span>🏫 빨간 마커: 평택대 정문 (목적지)</span>
         </div>
       </div>
 
       <div class="grid-2">
-        <!-- 마일리지 홀로그램 카드 -->
+        <!-- 지갑 요약 카드 -->
         <div class="card">
           <div class="card-title">
-            <span>스마트 통학 지갑</span>
+            <span>내 마일리지 지갑</span>
             <i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i>
           </div>
           <div class="wallet-card-holo">
-            <div style="font-size: 12px; opacity: 0.85; font-weight: 600; margin-bottom: 6px;">사용 가능 통학 마일리지</div>
+            <div style="font-size: 12px; opacity: 0.85; margin-bottom: 4px;">사용 가능 잔액</div>
             <div class="wallet-val"><span id="mainBalance">7,500</span><span>P</span></div>
-            <div style="font-size: 12px; margin-top: 14px; opacity: 0.9; display: flex; justify-content: space-between;">
+            <div style="font-size: 12px; margin-top: 10px; opacity: 0.9; display: flex; justify-content: space-between;">
               <span>평택대학교 정보통신학과</span>
               <span>1P = 1원 교내 사용</span>
             </div>
@@ -267,12 +295,12 @@
             </div>
             <div class="hud-row">
               <span class="hud-label">오프피크 보너스:</span>
-              <span class="hud-val">오전 08시 이전 조기 도착 (+200P)</span>
+              <span class="hud-val">08시 이전 조기 도착 (+200P)</span>
             </div>
           </div>
         </div>
 
-        <!-- 실시간 GPS 측정 및 결제 검증 컨트롤러 -->
+        <!-- 실시간 GPS 측정 & 검증 버튼 -->
         <div class="card">
           <div class="card-title">
             <span>실시간 결제·GPS 교차 검증</span>
@@ -281,15 +309,15 @@
 
           <div class="hud-panel">
             <div class="hud-row">
-              <span class="hud-label">내 단말기 위도·경도:</span>
+              <span class="hud-label">내 단말기 GPS 좌표:</span>
               <span class="hud-val" id="myGpsCoords">측정 대기 중</span>
             </div>
             <div class="hud-row">
-              <span class="hud-label">평택대 정문까지 직선거리:</span>
+              <span class="hud-label">평택대 정문까지 거리:</span>
               <span class="hud-val" id="distanceToCampus" style="color: var(--primary);">- km</span>
             </div>
             <div class="hud-row">
-              <span class="hud-label">대중교통 결제 연동 상태:</span>
+              <span class="hud-label">대중교통 결제 연동:</span>
               <span class="hud-val" id="transitTagStatus" style="color: var(--danger);">미태그 (승차 기록 없음)</span>
             </div>
           </div>
@@ -306,16 +334,15 @@
             <i class="fa-solid fa-shield-virus"></i> 3. 통학 데이터 교차 검증 실행
           </button>
 
-          <!-- 실시간 판정 패널 -->
           <div id="verifyAlert" class="alert-panel"></div>
         </div>
       </div>
 
-      <!-- 최근 인증 이력 테이블 -->
-      <div class="card" style="margin-top: 24px;">
+      <!-- 최근 이력 테이블 -->
+      <div class="card" style="margin-top: 18px;">
         <div class="card-title">
           <span>최근 통학 교차 검증 심사 원장</span>
-          <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;">실제 위도/경도 기반 판정 이력</span>
+          <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">실제 위도/경도 기반 이력</span>
         </div>
         <div class="table-responsive">
           <table>
@@ -353,7 +380,7 @@
           <div style="font-size: 13px; opacity: 0.85;">총 보유 마일리지</div>
           <div class="wallet-val"><span id="subBalance">7,500</span><span>P</span></div>
         </div>
-        <div style="display: flex; gap: 12px;">
+        <div style="display: flex; gap: 10px;">
           <button class="cyber-btn btn-gps" style="margin-bottom:0;" onclick="alert('교내 모바일 학생증 바코드와 연동되었습니다.')">
             <i class="fa-solid fa-qrcode"></i> 바코드 결제 생성
           </button>
@@ -370,7 +397,7 @@
         <div class="card-title" style="margin-bottom: 6px;">
           <span>교내 마일리지 제휴처 및 쿠폰 교환</span>
         </div>
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
           조기 통학으로 적립된 마일리지를 교내 학생식당, 카페 등에서 1P = 1원으로 현금처럼 사용하세요.
         </p>
 
@@ -409,8 +436,8 @@
     <div id="tab-guide" class="tab-content">
       <div class="card">
         <div class="card-title"><span>시스템 동작 및 오용 판정 기준</span></div>
-        <div style="font-size: 14px; line-height: 1.8; color: var(--text-main);">
-          <p><b>1. GPS 거리 측정:</b> 브라우저의 Geolocation 센서를 통해 실제 위도/경도를 획득하고 평택대학교 정문(36.9961, 127.1328)까지의 거리를 계산합니다.</p>
+        <div style="font-size: 13px; line-height: 1.8; color: var(--text-main);">
+          <p><b>1. GPS 거리 측정:</b> 스마트폰 위치 센서를 통해 실제 위도/경도를 획득하고 평택대학교 정문(36.9961, 127.1328)까지의 거리를 계산합니다.</p>
           <p><b>2. 도보 이동 오용 차단:</b> 캠퍼스 정문까지의 거리가 1.0km 미만이거나 대중교통 결제 트랜잭션이 없는 경우, 기숙사/원룸 거주자의 도보 이동으로 판정하여 리워드를 원천 거부합니다.</p>
           <p><b>3. 조기 통학 시간가치 보상:</b> 08:00 이전 조기 등교 시 기본 보너스 200P와 실제 대중교통 이용 거리(km)당 50P가 누적 지급됩니다.</p>
           <p><b>4. 마일리지 사용처:</b> 적립된 마일리지는 교내 학생식당(6,500원 식권) 및 교내 카페(3,000원 음료권) 등에서 자유롭게 현금 대신 사용할 수 있습니다.</p>
@@ -421,7 +448,6 @@
   </div>
 
   <script>
-    // 평택대학교 정문 공식 좌표
     const PTU_LAT = 36.9961;
     const PTU_LON = 127.1328;
 
@@ -431,7 +457,7 @@
     let calculatedDistKm = null;
     let isTransitTagged = false;
 
-    // 1. 다크모드 토글 함수
+    // 1. 다크모드 토글
     function toggleTheme() {
       const html = document.documentElement;
       const currentTheme = html.getAttribute('data-theme');
@@ -446,7 +472,7 @@
       }
     }
 
-    // 2. 오픈소스 지도 Leaflet 세팅
+    // 2. Leaflet 지도 초기화
     let map = L.map('map').setView([PTU_LAT, PTU_LON], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
@@ -458,7 +484,6 @@
     let userMarker = null;
     let routeLine = null;
 
-    // Haversine 거리 계산 함수
     function getDistanceKm(lat1, lon1, lat2, lon2) {
       const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -473,7 +498,7 @@
     // 1단계 GPS 측정
     function getMyLocation() {
       if (!navigator.geolocation) {
-        alert("브라우저가 GPS 위치를 지원하지 않습니다.");
+        alert("스마트폰이 GPS 위치 기능을 지원하지 않습니다.");
         return;
       }
 
@@ -494,9 +519,9 @@
         routeLine = L.polyline([[myCurrentLat, myCurrentLon], [PTU_LAT, PTU_LON]], { color: '#0ea5e9', weight: 4, dashArray: '6, 10' }).addTo(map);
         map.fitBounds([[myCurrentLat, myCurrentLon], [PTU_LAT, PTU_LON]], { padding: [40, 40] });
 
-        alert(`내 실제 GPS 위치를 성공적으로 수신했습니다!\n평택대 정문까지 거리: ${calculatedDistKm}km`);
+        alert(`내 실제 GPS 위치 수신 완료!\n평택대 정문까지 거리: ${calculatedDistKm}km`);
       }, error => {
-        alert("GPS 위치 권한을 브라우저에서 '허용'해 주세요.");
+        alert("스마트폰 브라우저 설정에서 위치 권한을 '허용'해 주세요.");
       }, { enableHighAccuracy: true });
     }
 
@@ -552,11 +577,11 @@
       if (isSuccess) {
         alertBox.className = 'alert-panel alert-success';
         alertBox.innerHTML = `
-          <div style="font-weight: 800; font-size: 15px; margin-bottom: 4px;">
+          <div style="font-weight: 800; font-size: 14px; margin-bottom: 4px;">
             <i class="fa-solid fa-circle-check"></i> 통학 교차 검증 승인 (마일리지 적립 완료)
           </div>
           <div><b>판정:</b> ${reasonText}</div>
-          <div style="margin-top: 6px; font-weight: 700; color: var(--success);">실제 측정 거리: ${calculatedDistKm}km | 적립 포인트: +${earnedPoints.toLocaleString()} P</div>
+          <div style="margin-top: 6px; font-weight: 700; color: var(--success);">실제 거리: ${calculatedDistKm}km | 적립: +${earnedPoints.toLocaleString()} P</div>
         `;
 
         currentBalance += earnedPoints;
@@ -566,11 +591,10 @@
       } else {
         alertBox.className = 'alert-panel alert-danger';
         alertBox.innerHTML = `
-          <div style="font-weight: 800; font-size: 15px; margin-bottom: 4px;">
+          <div style="font-weight: 800; font-size: 14px; margin-bottom: 4px;">
             <i class="fa-solid fa-triangle-exclamation"></i> 오용 탐지 엔진에 의해 보상이 거부되었습니다
           </div>
           <div><b>차단 사유:</b> ${reasonText}</div>
-          <div style="margin-top: 4px; color: var(--danger);">※ 장거리 대중교통 실이용자에게만 보상이 지급됩니다.</div>
         `;
       }
 
@@ -589,13 +613,22 @@
       tbody.insertAdjacentHTML('afterbegin', newRow);
     }
 
-    // 탭 전환
+    // 탭 전환 함수 (PC 상단 메뉴 및 스마트폰 하단 탭 바 동시 연동)
     function switchTab(tabId) {
-      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
       const tabs = ['commute', 'wallet', 'shop', 'guide'];
       const index = tabs.indexOf(tabId);
-      if (index !== -1) document.querySelectorAll('.nav-item')[index].classList.add('active');
 
+      // PC 상단 탭 스타일 갱신
+      document.querySelectorAll('.nav-item').forEach((item, idx) => {
+        item.classList.toggle('active', idx === index);
+      });
+
+      // 모바일 하단 탭 스타일 갱신
+      document.querySelectorAll('.m-nav-item').forEach((item, idx) => {
+        item.classList.toggle('active', idx === index);
+      });
+
+      // 탭 콘텐츠 전환
       document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
       const target = document.getElementById(`tab-${tabId}`);
       if (target) target.classList.add('active');
@@ -603,6 +636,7 @@
       if (tabId === 'commute') {
         setTimeout(() => map.invalidateSize(), 100);
       }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     // 쿠폰 교환 로직
