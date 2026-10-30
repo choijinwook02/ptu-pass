@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PTU 통학 마일리지 패스 - 평택대학교 정보통신</title>
+  <title>PTU 통학 마일리지 패스 - 시연 자료 팀</title>
   <!-- 아이콘 및 폰트 CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -12,7 +12,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    /* ================= 테마 시스템 (라이트 & 다크 모드) ================= */
     :root {
       --bg: #f8fafc;
       --card-bg: rgba(255, 255, 255, 0.92);
@@ -52,14 +51,12 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease; }
     body { background-color: var(--bg); color: var(--text-main); min-height: 100vh; padding-bottom: 95px; overflow-x: hidden; position: relative; }
 
-    /* 배경 오로라 효과 */
     body::before {
       content: ''; position: fixed; top: -140px; left: 50%; transform: translateX(-50%);
       width: 800px; height: 480px; background: radial-gradient(circle, rgba(59,130,246,0.18) 0%, rgba(14,165,233,0.06) 50%, transparent 80%);
       filter: blur(80px); pointer-events: none; z-index: 0;
     }
 
-    /* 상단 네비게이션 헤더 */
     header {
       background: var(--nav-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--card-border); position: sticky; top: 0; z-index: 1000;
@@ -117,12 +114,10 @@
     .m-nav-item i { font-size: 18px; }
     .m-nav-item.active { color: var(--primary); font-weight: 800; }
 
-    /* 메인 컨테이너 */
     .container { max-width: 1100px; margin: 20px auto; padding: 0 16px; position: relative; z-index: 1; }
     .tab-content { display: none; }
     .tab-content.active { display: block; animation: slideUp 0.3s ease; }
 
-    /* 글래스모피즘 카드 */
     .card {
       background: var(--card-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
       border: 1px solid var(--card-border); border-radius: 20px; padding: 22px; box-shadow: var(--card-shadow);
@@ -130,11 +125,9 @@
     }
     .card-title { font-size: 16px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 
-    /* 지도 영역 */
     #map { width: 100%; height: 320px; border-radius: 16px; border: 1px solid var(--card-border); margin-bottom: 12px; z-index: 10; }
     .leaflet-tile { filter: var(--map-filter); transition: filter 0.3s ease; }
 
-    /* 시연용 빠른 위치/시간 프리셋 바 */
     .preset-bar {
       display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between;
       background: rgba(59,130,246,0.06); border: 1px dashed var(--card-border); border-radius: 12px; padding: 10px 14px; margin-top: 10px;
@@ -158,7 +151,6 @@
       .card { padding: 16px; }
     }
 
-    /* 홀로그램 마일리지 카드 */
     .wallet-card-holo {
       background: var(--primary-gradient); border-radius: 18px; padding: 22px; color: white;
       box-shadow: 0 12px 30px -4px rgba(37,99,235,0.4), var(--glow); position: relative; overflow: hidden; margin-bottom: 16px;
@@ -171,7 +163,6 @@
     .wallet-val { font-size: 36px; font-weight: 900; letter-spacing: -0.5px; display: flex; align-items: baseline; gap: 6px; }
     .wallet-val span { font-size: 18px; font-weight: 700; opacity: 0.9; }
 
-    /* 센서 HUD 패널 */
     .hud-panel {
       background: rgba(0,0,0,0.03); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px; margin-bottom: 14px;
     }
@@ -181,7 +172,6 @@
     .hud-label { color: var(--text-muted); font-weight: 600; }
     .hud-val { font-weight: 800; color: var(--text-main); }
 
-    /* 버튼 스타일 */
     .cyber-btn {
       width: 100%; border: none; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 800;
       cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;
@@ -195,7 +185,6 @@
     [data-theme="dark"] .btn-transit { color: #38bdf8; background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3); }
     .btn-verify { background: var(--primary-gradient); color: white; box-shadow: 0 5px 18px rgba(37,99,235,0.35); font-size: 15px; }
 
-    /* 판정 결과 알림창 & 포인트 영수증 */
     .alert-panel { margin-top: 14px; padding: 16px; border-radius: 14px; font-size: 13px; display: none; line-height: 1.6; }
     .alert-success { background: rgba(16,185,129,0.12); border: 1.5px solid var(--success); color: var(--text-main); }
     .alert-danger { background: rgba(239,68,68,0.12); border: 1.5px solid var(--danger); color: var(--text-main); }
@@ -206,7 +195,6 @@
     .receipt-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
     .receipt-row.total { border-top: 1px dashed var(--card-border); padding-top: 6px; margin-top: 4px; font-weight: 900; font-size: 13px; color: var(--success); }
 
-    /* 테이블 */
     .table-responsive { width: 100%; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
     th { background: rgba(0,0,0,0.02); padding: 12px 14px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--card-border); }
@@ -215,7 +203,6 @@
     .tag-success { background: rgba(16,185,129,0.15); color: var(--success); }
     .tag-danger { background: rgba(239,68,68,0.15); color: var(--danger); }
 
-    /* 교내 사용처 그리드 */
     .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-top: 12px; }
     .shop-card {
       background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 22px;
@@ -231,7 +218,6 @@
       font-size: 14px; font-weight: 800; cursor: pointer;
     }
 
-    /* 모바일 바코드/쿠폰 모달 팝업 */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
       display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px;
@@ -266,7 +252,6 @@
         <span>PTU Commute Pass</span>
       </div>
 
-      <!-- PC 상단 메뉴 -->
       <ul class="nav-links">
         <li class="nav-item active" onclick="switchTab('commute')"><i class="fa-solid fa-crosshairs"></i> 통학 인증</li>
         <li class="nav-item" onclick="switchTab('wallet')"><i class="fa-solid fa-wallet"></i> 마일리지 지갑</li>
@@ -277,7 +262,7 @@
       <div class="nav-right">
         <div class="server-pill" title="Render 서버 자동 절전 방지 작동 중">
           <span class="pulse-dot"></span>
-          <span>교차검증 엔진 정상</span>
+          <span>시연 자료 팀 · 서버 정상</span>
         </div>
         <div class="header-wallet" onclick="switchTab('wallet')">
           <i class="fa-solid fa-coins" style="color: #f59e0b;"></i>
@@ -317,7 +302,6 @@
     <!-- ================= 1. 실시간 GPS 통학 인증 탭 ================= -->
     <div id="tab-commute" class="tab-content active">
       
-      <!-- 오픈소스 지도 위젯 -->
       <div class="card">
         <div class="card-title">
           <span><i class="fa-solid fa-map-location-dot" style="color: var(--primary); margin-right: 6px;"></i> 실시간 GPS 통학 경로 관제 지도</span>
@@ -331,7 +315,6 @@
           <span>🏫 빨간 마커: 평택대학교 정문 (36.9961, 127.1328)</span>
         </div>
 
-        <!-- 발표 시연 보조 컨트롤 바 (교내 발표장에서 원거리/오용 케이스를 즉시 시연하기 위한 보조 도구) -->
         <div class="preset-bar">
           <span style="font-size: 12px; font-weight: 800; color: var(--primary);">
             <i class="fa-solid fa-wand-magic-sparkles"></i> 발표 시연용 위치·시간 프리셋:
@@ -355,7 +338,7 @@
             <div style="font-size: 12px; opacity: 0.85; margin-bottom: 4px;">사용 가능 잔액</div>
             <div class="wallet-val"><span id="mainBalance">7,500</span><span>P</span></div>
             <div style="font-size: 12px; margin-top: 12px; opacity: 0.9; display: flex; justify-content: space-between;">
-              <span>평택대학교 정보통신학과</span>
+              <span id="teamNameDisplay">시연 자료 팀</span>
               <span>1P = 1원 교내 현금성 사용</span>
             </div>
           </div>
@@ -396,7 +379,7 @@
             </div>
           </div>
 
-          <button class="cyber-btn btn-gps" onclick="getMyLocation()">
+          <button class="cyber-btn btn-gps" id="gpsBtn" onclick="getMyLocation()">
             <i class="fa-solid fa-location-arrow"></i> 1. 내 실제 GPS 위치 가져오기 (센서 측정)
           </button>
 
@@ -408,7 +391,6 @@
             <i class="fa-solid fa-shield-virus"></i> 3. 통학 데이터 교차 검증 및 마일리지 적립
           </button>
 
-          <!-- 판정 결과 및 포인트 산출 영수증 -->
           <div id="verifyAlert" class="alert-panel"></div>
         </div>
       </div>
@@ -417,7 +399,7 @@
       <div class="card">
         <div class="card-title">
           <span>최근 통학 교차 검증 심사 원장</span>
-          <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;">실시간 알고리즘 판정 로그</span>
+          <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;">시연 자료 팀 · 실시간 알고리즘 판정 로그</span>
         </div>
         <div class="table-responsive">
           <table>
@@ -460,16 +442,16 @@
       <div class="card">
         <div class="card-title"><span>전자지갑 상세 관리 및 모바일 바코드</span><i class="fa-solid fa-credit-card" style="color: var(--primary);"></i></div>
         <div class="wallet-card-holo">
-          <div style="font-size: 13px; opacity: 0.85;">총 보유 마일리지</div>
+          <div style="font-size: 13px; opacity: 0.85;">시연 자료 팀 · 총 보유 마일리지</div>
           <div class="wallet-val"><span id="subBalance">7,500</span><span>P</span></div>
           <div style="font-size: 12px; margin-top: 10px; opacity: 0.9;">연동 계좌/카드: KB국민 K-패스 체크 (정상 연동 중)</div>
         </div>
-        <div style="display: flex; gap: 10px;">
-          <button class="cyber-btn btn-gps" style="margin-bottom:0;" onclick="openBarcodeModal('교내 통합 마일리지 현장 결제 바코드', '보유 잔액 한도 내 즉시 차감')">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="cyber-btn btn-gps" style="flex: 1; margin-bottom:0;" onclick="openBarcodeModal('교내 통합 마일리지 현장 결제 바코드', '보유 잔액 한도 내 즉시 차감')">
             <i class="fa-solid fa-qrcode"></i> 현장 결제 바코드 띄우기
           </button>
-          <button class="cyber-btn btn-transit" style="margin-bottom:0;" onclick="openBarcodeModal('K-패스 교통카드 연동 정보', '카드번호: 5421-****-****-8821 (정상 승인)')">
-            <i class="fa-solid fa-arrows-rotate"></i> 교통카드 연동 상태 확인
+          <button class="cyber-btn btn-transit" style="flex: 1; margin-bottom:0;" onclick="resetDemoData()">
+            <i class="fa-solid fa-rotate-left"></i> 시연 데이터 초기화 (7,500P 리셋)
           </button>
         </div>
       </div>
@@ -516,7 +498,6 @@
         </p>
 
         <div class="shop-grid">
-          <!-- 카페 교환권 (3,000 P) -->
           <div class="shop-card">
             <div class="shop-icon-wrap"><i class="fa-solid fa-mug-hot"></i></div>
             <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">교내 카페 3,000원 음료 교환권</div>
@@ -525,7 +506,6 @@
             <button class="btn-exchange" onclick="exchangeCoupon('교내 카페 3,000원 음료 교환권', 3000)">모바일 교환권 발급</button>
           </div>
 
-          <!-- 학생식당 식권 (6,500 P) -->
           <div class="shop-card">
             <div class="shop-icon-wrap"><i class="fa-solid fa-utensils"></i></div>
             <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">학생식당 1식 식권 교환권</div>
@@ -534,7 +514,6 @@
             <button class="btn-exchange" onclick="exchangeCoupon('학생식당 1식 식권 (6,500원)', 6500)">모바일 식권 발급</button>
           </div>
 
-          <!-- 인쇄권 (1,500 P) -->
           <div class="shop-card">
             <div class="shop-icon-wrap"><i class="fa-solid fa-print"></i></div>
             <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">학술정보관 인쇄·출력 50장권</div>
@@ -564,7 +543,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title"><span>결제·GPS 교차 검증 알고리즘 및 오용 차단 명세</span></div>
+        <div class="card-title"><span>시연 자료 팀 · 결제·GPS 교차 검증 알고리즘 명세</span></div>
         <div style="font-size: 13.5px; line-height: 1.85; color: var(--text-main);">
           <p><b>1. Haversine 기반 실제 통학 거리 산출:</b> 스마트폰 Geolocation 센서로 수집한 출발지 위·경도와 평택대학교 정문(36.9961, 127.1328) 간의 대원 거리를 산출합니다.</p>
           <p><b>2. 기숙사·인근 도보 통학 오용 필터링:</b> 측정 거리가 1.0km 미만이거나 대중교통 카드 승·하차 결제 트랜잭션이 존재하지 않는 경우, 대중교통 혼잡 완화와 무관한 도보 이동으로 판정하여 보상을 거부합니다.</p>
@@ -579,7 +558,7 @@
   <!-- 모바일 쿠폰 / 바코드 모달 창 -->
   <div id="barcodeModal" class="modal-overlay" onclick="closeBarcodeModal()">
     <div class="modal-box" onclick="event.stopPropagation()">
-      <div style="font-size: 12px; font-weight: 800; color: var(--primary); margin-bottom: 4px;">PTU SMART VOUCHER</div>
+      <div style="font-size: 12px; font-weight: 800; color: var(--primary); margin-bottom: 4px;">PTU SMART VOUCHER · 시연 자료 팀</div>
       <div id="modalTitle" style="font-size: 17px; font-weight: 900; margin-bottom: 6px;">교환권 이름</div>
       <div id="modalDesc" style="font-size: 12px; color: var(--text-muted);">상세 설명</div>
       <div class="barcode-visual">
@@ -591,7 +570,6 @@
   </div>
 
   <script>
-    // 평택대학교 정문 기준 좌표
     const PTU_LAT = 36.9961;
     const PTU_LON = 127.1328;
 
@@ -602,6 +580,28 @@
     let simulatedSpeedKmh = 42.5;
     let currentOriginLabel = "실제 GPS 측정 위치";
     let isTransitTagged = false;
+
+    // 초기 로드 시 서버 DB 잔액 동기화
+    async function syncWalletFromServer() {
+      try {
+        const res = await fetch('/api/wallet');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.balance !== undefined) {
+            currentBalance = data.balance;
+            document.getElementById('mainBalance').innerText = currentBalance.toLocaleString();
+            document.getElementById('subBalance').innerText = currentBalance.toLocaleString();
+            document.getElementById('navBalance').innerText = `${currentBalance.toLocaleString()} P`;
+          }
+          if (data.name) {
+            document.getElementById('teamNameDisplay').innerText = data.name;
+          }
+        }
+      } catch (e) {
+        // 로컬 파일 실행 시 기본값(7,500P) 유지
+      }
+    }
+    syncWalletFromServer();
 
     // 1. 다크/라이트 모드 전환
     function toggleTheme() {
@@ -625,7 +625,6 @@
     let userMarker = null;
     let routeLine = null;
 
-    // Haversine 공식 거리 계산
     function getDistanceKm(lat1, lon1, lat2, lon2) {
       const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -637,7 +636,6 @@
       return (R * c).toFixed(2);
     }
 
-    // 지도 마커 및 경로선 업데이트 공통 함수
     function updateMapAndHud(lat, lon, label, speedKmh) {
       myCurrentLat = lat;
       myCurrentLon = lon;
@@ -658,22 +656,28 @@
       map.fitBounds([[lat, lon], [PTU_LAT, PTU_LON]], { padding: [45, 45] });
     }
 
-    // [1단계] 실제 스마트폰/PC GPS 위치 측정
+    // [1단계] 실제 단말기 GPS 측정
     function getMyLocation() {
       if (!navigator.geolocation) {
         alert("브라우저가 GPS 기능을 지원하지 않습니다.");
         return;
       }
+      const gpsBtn = document.getElementById('gpsBtn');
+      const originalHtml = gpsBtn.innerHTML;
+      gpsBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 위성 좌표 수신 중...';
+
       navigator.geolocation.getCurrentPosition(pos => {
+        gpsBtn.innerHTML = originalHtml;
         const dist = parseFloat(getDistanceKm(pos.coords.latitude, pos.coords.longitude, PTU_LAT, PTU_LON));
         const estSpeed = dist < 1.0 ? 3.6 : 45.0;
         updateMapAndHud(pos.coords.latitude, pos.coords.longitude, "실제 단말기 GPS", estSpeed);
       }, () => {
-        alert("위치 권한을 허용해 주세요. (발표 시연 중이라면 상단의 시연 프리셋 버튼을 누르셔도 됩니다.)");
-      }, { enableHighAccuracy: true });
+        gpsBtn.innerHTML = originalHtml;
+        alert("위치 권한을 허용해 주세요. (발표 시연 중이라면 지도 하단의 프리셋 버튼을 누르셔도 됩니다.)");
+      }, { enableHighAccuracy: true, timeout: 8000 });
     }
 
-    // 발표 시연 보조 프리셋 적용 함수
+    // 발표 시연 보조 프리셋
     function applyPreset(type) {
       if (type === 'suwon') {
         updateMapAndHud(37.2519, 127.0713, "수원 영통역 정류장", 44.8);
@@ -704,7 +708,6 @@
       tagText.style.color = "var(--success)";
     }
 
-    // 숫자 카운팅 애니메이션
     function animateBalance(start, end) {
       const duration = 600;
       let startTime = null;
@@ -720,8 +723,8 @@
       requestAnimationFrame(step);
     }
 
-    // [3단계] 통학 데이터 교차 검증 및 마일리지 산출
-    function verifyRealCommute() {
+    // [3단계] 통학 교차 검증 (서버 API 연동 + 로컬 안전 폴백)
+    async function verifyRealCommute() {
       const alertBox = document.getElementById('verifyAlert');
       if (myCurrentLat === null) {
         alert("먼저 [1. 내 실제 GPS 위치 가져오기] 또는 지도 아래의 [시연용 프리셋]을 선택해 주세요.");
@@ -740,29 +743,63 @@
       let earnedPoints = 0;
       let reasonText = '';
       let statusBadge = '';
+      let baseReward = 300;
+      let earlyBonus = isEarly ? 200 : 0;
+      let distReward = Math.round(calculatedDistKm * 50);
 
-      // 3중 오용 판별 알고리즘
-      if (simulatedSpeedKmh > 150) {
-        isSuccess = false;
-        statusBadge = '<span class="tag tag-danger">스푸핑 차단</span>';
-        reasonText = `비정상 이동 속도(${simulatedSpeedKmh}km/h) 감지 — GPS 위치 조작(Mock Location) 차단`;
-      } else if (!isTransitTagged) {
-        isSuccess = false;
-        statusBadge = '<span class="tag tag-danger">지급 거부</span>';
-        reasonText = `대중교통 결제 트랜잭션 부재 (도보 이동 또는 카드 미태그 오용 차단)`;
-      } else if (calculatedDistKm < 1.0) {
-        isSuccess = false;
-        statusBadge = '<span class="tag tag-danger">지급 거부</span>';
-        reasonText = `평택대 정문까지 거리 ${calculatedDistKm}km (1.0km 미만 기숙사·인근 도보 통학 차단)`;
-      } else {
-        isSuccess = true;
-        statusBadge = '<span class="tag tag-success">정상 승인</span>';
-        const baseReward = 300;
-        const earlyBonus = isEarly ? 200 : 0;
-        const distReward = Math.round(calculatedDistKm * 50);
-        earnedPoints = baseReward + earlyBonus + distReward;
-        reasonText = `실제 거리 ${calculatedDistKm}km 및 대중교통 결제 교차 검증 일치`;
+      // 백엔드 서버 API 호출 시도
+      try {
+        const res = await fetch('/api/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            start_lat: myCurrentLat,
+            start_lon: myCurrentLon,
+            end_lat: PTU_LAT,
+            end_lon: PTU_LON,
+            speed_kmh: simulatedSpeedKmh,
+            has_payment: isTransitTagged,
+            is_early: isEarly
+          })
+        });
+        if (res.ok) {
+          const serverData = await res.json();
+          if (serverData.status === 'APPROVED') {
+            isSuccess = true;
+            earnedPoints = serverData.earned_points;
+            reasonText = serverData.reason;
+            statusBadge = '<span class="tag tag-success">정상 승인</span>';
+          } else {
+            isSuccess = false;
+            reasonText = serverData.reason;
+            statusBadge = `<span class="tag tag-danger">${serverData.badge || '지급 거부'}</span>`;
+          }
+        } else {
+          throw new Error("Local fallback");
+        }
+      } catch (err) {
+        // 오프라인/로컬 환경 폴백 판정
+        if (simulatedSpeedKmh > 150) {
+          isSuccess = false;
+          statusBadge = '<span class="tag tag-danger">스푸핑 차단</span>';
+          reasonText = `비정상 이동 속도(${simulatedSpeedKmh}km/h) 감지 — GPS 위치 조작(Mock Location) 차단`;
+        } else if (!isTransitTagged) {
+          isSuccess = false;
+          statusBadge = '<span class="tag tag-danger">지급 거부</span>';
+          reasonText = `대중교통 결제 트랜잭션 부재 (도보 이동 또는 카드 미태그 오용 차단)`;
+        } else if (calculatedDistKm < 1.0) {
+          isSuccess = false;
+          statusBadge = '<span class="tag tag-danger">지급 거부</span>';
+          reasonText = `평택대 정문까지 거리 ${calculatedDistKm}km (1.0km 미만 기숙사·인근 도보 통학 차단)`;
+        } else {
+          isSuccess = true;
+          statusBadge = '<span class="tag tag-success">정상 승인</span>';
+          earnedPoints = baseReward + earlyBonus + distReward;
+          reasonText = `실제 거리 ${calculatedDistKm}km 및 대중교통 결제 교차 검증 일치`;
+        }
+      }
 
+      if (isSuccess) {
         alertBox.style.display = 'block';
         alertBox.className = 'alert-panel alert-success';
         alertBox.innerHTML = `
@@ -771,7 +808,7 @@
           </div>
           <div>${reasonText}</div>
           <div class="receipt-box">
-            <div class="receipt-row"><span>기본 대중교통 통학 보상</span><span>+300 P</span></div>
+            <div class="receipt-row"><span>기본 대중교통 통학 보상</span><span>+${baseReward} P</span></div>
             <div class="receipt-row"><span>08시 이전 조기 도착(오프피크) 보너스</span><span>+${earlyBonus} P</span></div>
             <div class="receipt-row"><span>거리 비례 가중치 (${calculatedDistKm}km × 50P)</span><span>+${distReward.toLocaleString()} P</span></div>
             <div class="receipt-row total"><span>최종 적립 마일리지</span><span>+${earnedPoints.toLocaleString()} P</span></div>
@@ -782,7 +819,6 @@
         currentBalance += earnedPoints;
         animateBalance(prevBal, currentBalance);
 
-        // 지갑 원장에도 자동 추가
         ledgerBody.insertAdjacentHTML('afterbegin', `
           <tr>
             <td>${dateStr} (${timeStr})</td>
@@ -792,9 +828,7 @@
             <td>${isEarly ? '조기등교 보너스 포함' : '일반 통학'}</td>
           </tr>
         `);
-      }
-
-      if (!isSuccess) {
+      } else {
         alertBox.style.display = 'block';
         alertBox.className = 'alert-panel alert-danger';
         alertBox.innerHTML = `
@@ -805,7 +839,6 @@
         `;
       }
 
-      // 하단 검증 이력 테이블 최상단 추가
       tbody.insertAdjacentHTML('afterbegin', `
         <tr style="background: ${isSuccess ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)'};">
           <td>${dateStr} (${timeStr})</td>
@@ -820,7 +853,7 @@
       `);
     }
 
-    // 탭 전환 (PC 상단 + 스마트폰 하단 동시 연동)
+    // 탭 전환
     function switchTab(tabId) {
       const tabs = ['commute', 'wallet', 'shop', 'guide'];
       const index = tabs.indexOf(tabId);
@@ -836,7 +869,6 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 바코드 모달 열기/닫기
     function openBarcodeModal(title, desc) {
       document.getElementById('modalTitle').innerText = title;
       document.getElementById('modalDesc').innerText = desc;
@@ -847,13 +879,21 @@
       document.getElementById('barcodeModal').classList.remove('show');
     }
 
-    // 교내 사용처 쿠폰 교환 (학식 6,500P / 카페 3,000P 차감 + 바코드 팝업 + 지갑 원장 기록)
-    function exchangeCoupon(name, cost) {
+    // 교내 사용처 쿠폰 교환 (서버 DB 연동)
+    async function exchangeCoupon(name, cost) {
       if (currentBalance < cost) {
         alert(`마일리지가 부족합니다!\n필요 포인트: ${cost.toLocaleString()} P\n현재 잔액: ${currentBalance.toLocaleString()} P`);
         return;
       }
       if (confirm(`[${name}]을(를) ${cost.toLocaleString()} P로 발급하시겠습니까?`)) {
+        try {
+          await fetch('/api/exchange', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ item_name: name, cost: cost })
+          });
+        } catch (e) {}
+
         const prevBal = currentBalance;
         currentBalance -= cost;
         animateBalance(prevBal, currentBalance);
@@ -873,9 +913,22 @@
       }
     }
 
+    // 발표 리허설용 7,500P 즉시 초기화 함수
+    async function resetDemoData() {
+      if (confirm("시연 데이터를 초기 상태(보유 잔액 7,500 P)로 리셋하시겠습니까?")) {
+        try {
+          await fetch('/api/reset', { method: 'POST' });
+        } catch (e) {}
+        const prevBal = currentBalance;
+        currentBalance = 7500;
+        animateBalance(prevBal, 7500);
+        alert("시연 데이터가 7,500 P로 깔끔하게 초기화되었습니다.");
+      }
+    }
+
     // Render 무료 서버 15분 절전(Sleep) 방지용 자동 Keep-Alive 핑 (3분 주기)
     setInterval(() => {
-      fetch(window.location.href, { method: 'HEAD' }).catch(() => {});
+      fetch('/api/health').catch(() => {});
     }, 180000);
   </script>
 </body>
