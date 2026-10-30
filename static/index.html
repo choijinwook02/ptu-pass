@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>평택대학교 통학 마일리지 패스 (실시간 GPS 연동)</title>
+  <!-- 폰트 및 아이콘 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- 오픈소스 지도 Leaflet CSS & JS (무료, API 키 불필요) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-light: #2563eb;
+      --secondary: #0ea5e9;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 60px; min-height: 100vh; }
+
+    /* 상단 GNB */
+    header { background: white; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .nav-container { max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 800; color: var(--primary); cursor: pointer; }
+    .logo i { font-size: 22px; color: var(--primary-light); }
+    
+    .nav-links { display: flex; gap: 8px; list-style: none; }
+    .nav-item { padding: 8px 14px; border-radius: 8px; font-size: 14px; font-weight: 700; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+    .nav-item:hover { color: var(--primary); background: #f1f5f9; }
+    .nav-item.active { color: white; background: var(--primary-light); }
+    .header-wallet { display: flex; align-items: center; gap: 8px; background: #eff6ff; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; color: var(--primary); border: 1px solid #bfdbfe; }
+
+    .container { max-width: 1080px; margin: 24px auto; padding: 0 16px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+
+    /* 지도 영역 */
+    #map { width: 100%; height: 320px; border-radius: 14px; border: 1px solid var(--border); margin-bottom: 16px; z-index: 10; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .card-title { font-size: 16px; font-weight: 700; color: var(--text); display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .card-title i { color: var(--primary-light); }
+
+    /* 지갑 카드 */
+    .wallet-box { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); border-radius: 14px; padding: 20px; color: white; margin-bottom: 14px; }
+    .wallet-label { font-size: 12px; opacity: 0.85; font-weight: 500; margin-bottom: 4px; }
+    .wallet-val { font-size: 32px; font-weight: 800; display: flex; align-items: baseline; gap: 4px; }
+    .wallet-val span { font-size: 18px; font-weight: 600; }
+
+    /* GPS 상태 표시 패널 */
+    .gps-panel { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+    .gps-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+    .gps-row:last-child { margin-bottom: 0; }
+    .gps-key { color: var(--muted); font-weight: 600; }
+    .gps-val { font-weight: 700; color: var(--text); }
+
+    /* 버튼 스타일 */
+    .btn { width: 100%; border: none; padding: 13px; border-radius: 10px; font-size: 14px; font-weight: 800; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s; margin-bottom: 8px; }
+    .btn-gps { background: #0f172a; color: white; }
+    .btn-gps:hover { background: #1e293b; }
+    .btn-transit { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .btn-transit:hover { background: #bae6fd; }
+    .btn-verify { background: var(--primary-light); color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+    .btn-verify:hover { background: var(--primary); }
+
+    /* 결과 피드백 패널 */
+    .alert-panel { margin-top: 14px; padding: 16px; border-radius: 12px; font-size: 13px; display: none; line-height: 1.5; }
+    .alert-success { background: #ecfdf5; border: 1.5px solid #a7f3d0; color: #065f46; }
+    .alert-danger { background: #fef2f2; border: 1.5px solid #fecaca; color: #991b1b; }
+
+    /* 테이블 */
+    .table-responsive { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th { background: #f8fafc; padding: 12px 14px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--border); }
+    td { padding: 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .tag { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+    .tag-success { background: #dcfce7; color: #15803d; }
+    .tag-danger { background: #fee2e2; color: #b91c1c; }
+
+    /* 상점 카드 그리드 */
+    .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .shop-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center; }
+    .shop-icon { width: 50px; height: 50px; border-radius: 12px; background: #eff6ff; color: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 12px; }
+    .btn-exchange { width: 100%; background: #0f172a; color: white; border: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <!-- 헤더 -->
+  <header>
+    <div class="nav-container">
+      <div class="logo" onclick="switchTab('commute')">
+        <i class="fa-solid fa-graduation-cap"></i>
+        <span>PTU 통학패스</span>
+      </div>
+
+      <ul class="nav-links">
+        <li class="nav-item active" onclick="switchTab('commute')">통학 인증</li>
+        <li class="nav-item" onclick="switchTab('wallet')">마일리지 지갑</li>
+        <li class="nav-item" onclick="switchTab('shop')">교내 사용처</li>
+        <li class="nav-item" onclick="switchTab('guide')">이용 안내</li>
+      </ul>
+
+      <div class="header-wallet" onclick="switchTab('wallet')">
+        <i class="fa-solid fa-coins" style="color: #f59e0b;"></i>
+        <span id="navBalance">2,450 P</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- 1. 실시간 GPS 통학 인증 탭 -->
+    <div id="tab-commute" class="tab-content active">
+      
+      <!-- 오픈소스 지도 위젯 (내 위치 및 평택대학교 표시) -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-title">
+          <span>실시간 통학 경로 지도 (OpenStreetMap GPS 연동)</span>
+          <span style="font-size: 12px; color: var(--primary-light);"><i class="fa-solid fa-satellite"></i> GPS 실시간 활성화</span>
+        </div>
+        <div id="map"></div>
+        <div style="font-size: 12px; color: var(--muted); display: flex; justify-content: space-between;">
+          <span>📍 파란 마커: 내 현재 GPS 위치</span>
+          <span>🏫 빨간 마커: 평택대학교 정문 (목적지)</span>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- 마일리지 카드 -->
+        <div class="card">
+          <div class="card-title">
+            <span>내 마일리지 지갑</span>
+            <i class="fa-solid fa-wallet"></i>
+          </div>
+          <div class="wallet-box">
+            <div class="wallet-label">보유 마일리지 잔액</div>
+            <div class="wallet-val"><span id="mainBalance">2,450</span><span>P</span></div>
+          </div>
+          <div style="font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span>연동 교통카드: <b>KB국민 K-패스 (5421-****)</b></span>
+            <span style="color: var(--success); font-weight: 700;"><i class="fa-solid fa-circle-check"></i> 연동 완료</span>
+          </div>
+          <div style="font-size: 13px; color: var(--muted); display: flex; justify-content: space-between;">
+            <span>시스템 대상: <b>평택대학교 정보통신학과</b></span>
+            <span>오프피크 보너스: <b>오전 8시 이전</b></span>
+          </div>
+        </div>
+
+        <!-- 실시간 GPS 측정 및 검증 컨트롤러 -->
+        <div class="card">
+          <div class="card-title">
+            <span>실시간 GPS & 결제 교차 검증</span>
+            <i class="fa-solid fa-crosshairs"></i>
+          </div>
+
+          <!-- GPS 측정 현황 -->
+          <div class="gps-panel">
+            <div class="gps-row">
+              <span class="gps-key">내 GPS 좌표:</span>
+              <span class="gps-val" id="myGpsCoords">측정 대기 중</span>
+            </div>
+            <div class="gps-row">
+              <span class="gps-key">평택대 정문까지 직선거리:</span>
+              <span class="gps-val" id="distanceToCampus">- km</span>
+            </div>
+            <div class="gps-row">
+              <span class="gps-key">대중교통 결제 연동 상태:</span>
+              <span class="gps-val" id="transitTagStatus" style="color: var(--danger);">미태그 (승차 기록 없음)</span>
+            </div>
+          </div>
+
+          <!-- 3개 실행 버튼 -->
+          <button class="btn btn-gps" onclick="getMyLocation()">
+            <i class="fa-solid fa-location-arrow"></i> 1. 내 실제 GPS 위치 가져오기
+          </button>
+
+          <button class="btn btn-transit" onclick="tagTransitCard()">
+            <i class="fa-solid fa-credit-card"></i> 2. 대중교통 승차 결제 태그 (가상 API)
+          </button>
+
+          <button class="btn btn-verify" onclick="verifyRealCommute()">
+            <i class="fa-solid fa-shield-halved"></i> 3. 통학 데이터 교차 검증 실행
+          </button>
+
+          <!-- 판정 알림창 -->
+          <div id="verifyAlert" class="alert-panel"></div>
+        </div>
+      </div>
+
+      <!-- 이력 테이블 -->
+      <div class="card">
+        <div class="card-title">
+          <span>최근 통학 교차 검증 심사 이력</span>
+          <span style="font-size: 12px; color: var(--muted); font-weight: normal;">실제 GPS 거리 기반 판정 내역</span>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>일시</th>
+                <th>출발지 좌표 / 교통수단</th>
+                <th>측정 거리</th>
+                <th>교차 검증 상태</th>
+                <th>상세 판정 사유</th>
+                <th>적립 포인트</th>
+              </tr>
+            </thead>
+            <tbody id="historyTbody">
+              <tr>
+                <td>2026-10-30</td>
+                <td>수원 영통역 · 광역버스</td>
+                <td>28.4 km</td>
+                <td><span class="tag tag-success">정상 승인</span></td>
+                <td>결제 트랜잭션 일치 및 조기 도착(오프피크) 가중치 반영</td>
+                <td style="font-weight: 700; color: var(--success);">+1,920 P</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 2. 지갑 상세 탭 -->
+    <div id="tab-wallet" class="tab-content">
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-title"><span>전자지갑 상세 관리</span><i class="fa-solid fa-credit-card"></i></div>
+        <div class="wallet-box">
+          <div class="wallet-label">총 사용 가능 잔액</div>
+          <div class="wallet-val"><span id="subBalance">2,450</span><span>P</span></div>
+        </div>
+        <button class="btn btn-gps" onclick="alert('교내 모바일 학생증 바코드와 연동되었습니다.')">바코드 결제 생성</button>
+      </div>
+    </div>
+
+    <!-- 3. 교내 사용처 탭 -->
+    <div id="tab-shop" class="tab-content">
+      <div class="card-title" style="margin-bottom: 16px;"><span>교내 마일리지 제휴처 및 쿠폰 교환</span></div>
+      <div class="shop-grid">
+        <div class="shop-card">
+          <div class="shop-icon"><i class="fa-solid fa-mug-hot"></i></div>
+          <div style="font-weight: 700; margin-bottom: 4px;">교내 카페 3,000원 할인권</div>
+          <div style="color: var(--primary); font-weight: 800; margin-bottom: 14px;">2,000 P 차감</div>
+          <button class="btn-exchange" onclick="exchangeCoupon('카페 할인권', 2000)">교환하기</button>
+        </div>
+        <div class="shop-card">
+          <div class="shop-icon"><i class="fa-solid fa-utensils"></i></div>
+          <div style="font-weight: 700; margin-bottom: 4px;">학생식당 1식 식권 교환권</div>
+          <div style="color: var(--primary); font-weight: 800; margin-bottom: 14px;">4,500 P 차감</div>
+          <button class="btn-exchange" onclick="exchangeCoupon('학생식당 식권', 4500)">교환하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 이용 안내 탭 -->
+    <div id="tab-guide" class="tab-content">
+      <div class="card">
+        <div class="card-title"><span>시스템 동작 및 오용 판정 기준</span></div>
+        <div style="font-size: 14px; line-height: 1.7; color: #334155;">
+          <p><b>1. GPS 거리 측정:</b> 브라우저의 Geolocation 센서를 통해 실제 위도/경도를 획득하고 평택대학교 정문(36.9961, 127.1328)까지의 거리를 계산합니다.</p>
+          <p><b>2. 도보 이동 오용 차단:</b> 캠퍼스 정문까지의 거리가 1.0km 미만이거나 대중교통 결제 트랜잭션이 없는 경우, 기숙사/원룸 거주자의 도보 이동으로 판정하여 리워드를 원천 거부합니다.</p>
+          <p><b>3. 조기 통학 시간가치 보상:</b> 08:00 이전 조기 등교 시 기본 보너스 200P와 실제 대중교통 이용 거리(km)당 50P가 누적 지급됩니다.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // 평택대학교 정문 공식 좌표
+    const PTU_LAT = 36.9961;
+    const PTU_LON = 127.1328;
+
+    let currentBalance = 2450;
+    let myCurrentLat = null;
+    let myCurrentLon = null;
+    let calculatedDistKm = null;
+    let isTransitTagged = false;
+
+    // 지도 객체 초기화 (평택대학교 중심)
+    let map = L.map('map').setView([PTU_LAT, PTU_LON], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // 평택대학교 정문 마커
+    let campusMarker = L.marker([PTU_LAT, PTU_LON]).addTo(map)
+      .bindPopup("<b>평택대학교 정문</b><br>통학 마일리지 검증 기준점").openPopup();
+
+    let userMarker = null;
+    let routeLine = null;
+
+    // Haversine 두 지점 간 거리(km) 계산 공식
+    function getDistanceKm(lat1, lon1, lat2, lon2) {
+      const R = 6371; // 지구 반지름
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return (R * c).toFixed(2);
+    }
+
+    // 1단계: 브라우저 실제 GPS 위치 가져오기
+    function getMyLocation() {
+      if (!navigator.geolocation) {
+        alert("브라우저가 GPS 위치를 지원하지 않습니다.");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(position => {
+        myCurrentLat = position.coords.latitude;
+        myCurrentLon = position.coords.longitude;
+        calculatedDistKm = parseFloat(getDistanceKm(myCurrentLat, myCurrentLon, PTU_LAT, PTU_LON));
+
+        document.getElementById('myGpsCoords').innerText = `${myCurrentLat.toFixed(4)}, ${myCurrentLon.toFixed(4)}`;
+        document.getElementById('distanceToCampus').innerText = `${calculatedDistKm} km`;
+
+        // 지도 업데이트: 기존 마커 제거 후 내 위치 찍기
+        if (userMarker) map.removeLayer(userMarker);
+        if (routeLine) map.removeLayer(routeLine);
+
+        userMarker = L.marker([myCurrentLat, myCurrentLon]).addTo(map)
+          .bindPopup(`<b>내 현재 위치</b><br>평택대까지 거리: ${calculatedDistKm} km`).openPopup();
+
+        // 내 위치와 평택대 연결하는 선 그리기
+        routeLine = L.polyline([[myCurrentLat, myCurrentLon], [PTU_LAT, PTU_LON]], { color: '#2563eb', weight: 4, dashArray: '5, 10' }).addTo(map);
+
+        // 두 지점이 모두 보이도록 지도 줌 조정
+        map.fitBounds([[myCurrentLat, myCurrentLon], [PTU_LAT, PTU_LON]], { padding: [40, 40] });
+
+        alert(`내 실제 GPS 위치를 성공적으로 수신했습니다!\n평택대 정문까지 거리: ${calculatedDistKm}km`);
+      }, error => {
+        alert("GPS 위치 권한을 브라우저에서 '허용'해 주셔야 실제 좌표가 측정됩니다.");
+      }, { enableHighAccuracy: true });
+    }
+
+    // 2단계: 대중교통 결제 태그 시뮬레이션
+    function tagTransitCard() {
+      isTransitTagged = true;
+      const tagText = document.getElementById('transitTagStatus');
+      tagText.innerText = "연동 완료 (수도권 광역/시내버스 기본요금 승차 확인)";
+      tagText.style.color = "var(--success)";
+      alert("대중교통 교통카드 결제 트랜잭션이 연동되었습니다!");
+    }
+
+    // 3단계: 실제 GPS 거리 기반 교차 검증 실행
+    function verifyRealCommute() {
+      const alertBox = document.getElementById('verifyAlert');
+      if (myCurrentLat === null) {
+        alert("먼저 [1. 내 실제 GPS 위치 가져오기] 버튼을 눌러 위치를 측정해 주세요.");
+        return;
+      }
+
+      const tbody = document.getElementById('historyTbody');
+      const now = new Date();
+      const currentHour = now.getHours();
+      const timeStr = `${String(currentHour).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const dateStr = now.toISOString().split('T')[0];
+
+      let isSuccess = false;
+      let earnedPoints = 0;
+      let reasonText = '';
+      let statusBadge = '';
+
+      // 오용 판별 로직
+      if (!isTransitTagged) {
+        // 결제 내역 없음
+        isSuccess = false;
+        statusBadge = '<span class="tag tag-danger">지급 거부</span>';
+        reasonText = `대중교통 결제 트랜잭션 부재 (도보 이동 또는 카드 미태그 감지)`;
+      } else if (calculatedDistKm < 1.0) {
+        // 학교에서 1km 미만 거리 (기숙사 / 정문 인근 거주자 도보 통학)
+        isSuccess = false;
+        statusBadge = '<span class="tag tag-danger">지급 거부</span>';
+        reasonText = `평택대 정문까지 거리가 ${calculatedDistKm}km로 도보 이동 기준(1km 미만)에 해당하여 오용 차단됨`;
+      } else {
+        // 정상 장거리 통학
+        isSuccess = true;
+        statusBadge = '<span class="tag tag-success">정상 승인</span>';
+        
+        let baseReward = 300;
+        let earlyBonus = (currentHour < 8) ? 200 : 0; // 8시 이전 조기 도착 보너스
+        let distanceReward = Math.round(calculatedDistKm * 50); // km당 50P
+        earnedPoints = baseReward + earlyBonus + distanceReward;
+
+        reasonText = `실제 통학 거리 ${calculatedDistKm}km 및 대중교통 결제 일치 검증 통과 (거리 비례 마일리지 지급)`;
+      }
+
+      // UI 알림창 갱신
+      alertBox.style.display = 'block';
+      if (isSuccess) {
+        alertBox.className = 'alert-panel alert-success';
+        alertBox.innerHTML = `
+          <div style="font-weight: 800; font-size: 15px; margin-bottom: 4px;">
+            <i class="fa-solid fa-circle-check"></i> 통학 교차 검증 승인 (마일리지 적립 완료)
+          </div>
+          <div><b>판정:</b> ${reasonText}</div>
+          <div style="margin-top: 6px; font-weight: 700; color: #059669;">실제 측정 거리: ${calculatedDistKm}km | 적립 포인트: +${earnedPoints.toLocaleString()} P</div>
+        `;
+
+        currentBalance += earnedPoints;
+        document.getElementById('mainBalance').innerText = currentBalance.toLocaleString();
+        document.getElementById('subBalance').innerText = currentBalance.toLocaleString();
+        document.getElementById('navBalance').innerText = `${currentBalance.toLocaleString()} P`;
+      } else {
+        alertBox.className = 'alert-panel alert-danger';
+        alertBox.innerHTML = `
+          <div style="font-weight: 800; font-size: 15px; margin-bottom: 4px;">
+            <i class="fa-solid fa-triangle-exclamation"></i> 오용 탐지 엔진에 의해 보상이 거부되었습니다
+          </div>
+          <div><b>차단 사유:</b> ${reasonText}</div>
+          <div style="margin-top: 4px; color: #991b1b;">※ 장거리 대중교통 실이용자에게만 보상이 지급됩니다.</div>
+        `;
+      }
+
+      // 테이블 맨 위에 이력 추가
+      const newRow = `
+        <tr style="background: ${isSuccess ? '#f0fdf4' : '#fef2f2'};">
+          <td>${dateStr} (${timeStr})</td>
+          <td>위도 ${myCurrentLat.toFixed(3)}, 경도 ${myCurrentLon.toFixed(3)}</td>
+          <td>${calculatedDistKm} km</td>
+          <td>${statusBadge}</td>
+          <td>${reasonText}</td>
+          <td style="font-weight: 700; color: ${isSuccess ? 'var(--success)' : 'var(--muted)'};">
+            ${isSuccess ? '+' + earnedPoints.toLocaleString() + ' P' : '0 P'}
+          </td>
+        </tr>
+      `;
+      tbody.insertAdjacentHTML('afterbegin', newRow);
+    }
+
+    // 탭 전환
+    function switchTab(tabId) {
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      const tabs = ['commute', 'wallet', 'shop', 'guide'];
+      const index = tabs.indexOf(tabId);
+      if (index !== -1) document.querySelectorAll('.nav-item')[index].classList.add('active');
+
+      document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+      const target = document.getElementById(`tab-${tabId}`);
+      if (target) target.classList.add('active');
+
+      if (tabId === 'commute') {
+        setTimeout(() => map.invalidateSize(), 100);
+      }
+    }
+
+    // 쿠폰 교환
+    function exchangeCoupon(name, cost) {
+      if (currentBalance < cost) {
+        alert(`마일리지가 부족합니다. (현재: ${currentBalance.toLocaleString()}P)`);
+        return;
+      }
+      if (confirm(`[${name}]을(를) ${cost.toLocaleString()}P로 교환하시겠습니까?`)) {
+        currentBalance -= cost;
+        document.getElementById('mainBalance').innerText = currentBalance.toLocaleString();
+        document.getElementById('subBalance').innerText = currentBalance.toLocaleString();
+        document.getElementById('navBalance').innerText = `${currentBalance.toLocaleString()} P`;
+        alert("교환이 완료되었습니다!");
+      }
+    }
+  </script>
+</body>
+</html>
