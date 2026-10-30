@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>평택대 통학 마일리지 패스</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 20px; background: #f4f6f9; display: flex; justify-content: center; }
+    .card { background: white; width: 100%; max-width: 400px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #1a56db; margin-top: 0; }
+    .wallet-box { background: #e8f0fe; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
+    .points { font-size: 26px; font-weight: bold; color: #1a56db; }
+    button { width: 100%; padding: 12px; margin: 8px 0; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; }
+    .btn-start { background: #28a745; color: white; }
+    .btn-pay { background: #ffc107; color: black; }
+    .btn-end { background: #007bff; color: white; }
+    .result-box { margin-top: 15px; padding: 12px; border-radius: 6px; font-size: 14px; display: none; line-height: 1.5; }
+    .status-text { font-size: 12px; color: #666; margin-bottom: 5px; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>🎓 통학 리워드 패스</h2>
+  
+  <div class="wallet-box">
+    <div id="userName" style="font-size: 14px; color: #555;">이동구 학생</div>
+    <div>현재 마일리지 잔액</div>
+    <div class="points" id="balanceDisplay">1,000 P</div>
+  </div>
+
+  <div class="status-text" id="gpsStatus">출발지: 미기록</div>
+  <button class="btn-start" onclick="startCommute()">1. 집에서 출발 (현재 GPS 측정)</button>
+  
+  <div class="status-text" id="payStatus">대중교통 결제: 미태그</div>
+  <button class="btn-pay" onclick="simulatePayment()">2. 버스/지하철 탑승 태그</button>
+  
+  <button class="btn-end" onclick="finishCommute()">3. 학교 도착 및 마일리지 검증</button>
+
+  <div id="resultBox" class="result-box"></div>
+</div>
+
+<script>
+  let startLat = 0, startLon = 0;
+  let hasPayment = false;
+  const userId = "2021143028";
+
+  async function loadWallet() {
+    try {
+      const res = await fetch(`/api/wallet/${userId}`);
+      const data = await res.json();
+      if(data.balance !== undefined) {
+        document.getElementById('balanceDisplay').innerText = data.balance.toLocaleString() + ' P';
+        document.getElementById('userName').innerText = data.name + ' 학생';
+      }
+    } catch(e) { console.log(e); }
+  }
+  loadWallet();
+
+  function startCommute() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(position => {
+        startLat = position.coords.latitude;
+        startLon = position.coords.longitude;
+        document.getElementById('gpsStatus').innerText = `출발지: 위도 ${startLat.toFixed(3)}, 경도 ${startLon.toFixed(3)}`;
+        alert("출발지 GPS 좌표가 정상 기록되었습니다!");
+      }, () => alert("GPS 권한을 허용해 주세요."));
+    }
+  }
+
+  function simulatePayment() {
+    hasPayment = true;
+    document.getElementById('payStatus').innerText = "대중교통 결제: 승차 태그 완료 (정상)";
+    alert("교통카드 결제 트랜잭션이 연동되었습니다!");
+  }
+
+  async function finishCommute() {
+    if (startLat === 0) {
+      alert("출발 버튼을 먼저 눌러주세요.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async position => {
+      const endLat = position.coords.latitude;
+      const endLon = position.coords.longitude;
+
+      const res = await fetch('/api/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          start_lat: startLat,
+          start_lon: startLon,
+          end_lat: endLat,
+          end_lon: endLon,
+          duration_minutes: 35,
+          has_payment: hasPayment
+        })
+      });
+
+      const result = await res.json();
+      const resultBox = document.getElementById('resultBox');
+      resultBox.style.display = 'block';
+
+      if (result.status === "APPROVED") {
+        resultBox.style.background = '#d4edda';
+        resultBox.style.color = '#155724';
+        resultBox.innerHTML = `<b>[승인 완료]</b><br>${result.message}<br>이동거리: ${result.distance}km | 평균속도: ${result.speed}km/h`;
+        document.getElementById('balanceDisplay').innerText = result.new_balance.toLocaleString() + ' P';
+      } else {
+        resultBox.style.background = '#f8d7da';
+        resultBox.style.color = '#721c24';
+        resultBox.innerHTML = `<b>[보상 거부]</b><br>${result.reason}`;
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
