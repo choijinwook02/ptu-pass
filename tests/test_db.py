@@ -77,6 +77,8 @@ def test_migrates_legacy_schema(tmp_path):
 
 
 def test_demo_password_not_overwritten(db_path, raw_db):
+    raw_db.execute("UPDATE USERS SET password_hash = NULL WHERE user_id = ?", (db.DEMO_USER_ID,))
+    raw_db.commit()
     db.init_db(db_path, demo_password_hash="FIRST")
     db.init_db(db_path, demo_password_hash="SECOND")
     row = raw_db.execute("SELECT password_hash FROM USERS WHERE user_id = ?", (db.DEMO_USER_ID,)).fetchone()

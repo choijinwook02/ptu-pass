@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS USERS (
     wallet_balance INTEGER NOT NULL DEFAULT 0,
     total_distance REAL    NOT NULL DEFAULT 0,
     early_count    INTEGER NOT NULL DEFAULT 0,
+    failed_logins  INTEGER NOT NULL DEFAULT 0,  -- 연속 로그인 실패 횟수
+    locked_until   TEXT,                        -- 잠금 해제 시각 (UTC ISO)
     created_at     TEXT
 );
 
@@ -48,6 +50,8 @@ CREATE INDEX IF NOT EXISTS idx_logs_user ON COMMUTE_LOGS(user_id, id);
 _USER_COLUMN_PATCHES = {
     "password_hash": "ALTER TABLE USERS ADD COLUMN password_hash TEXT",
     "created_at": "ALTER TABLE USERS ADD COLUMN created_at TEXT",
+    "failed_logins": "ALTER TABLE USERS ADD COLUMN failed_logins INTEGER NOT NULL DEFAULT 0",
+    "locked_until": "ALTER TABLE USERS ADD COLUMN locked_until TEXT",
 }
 
 

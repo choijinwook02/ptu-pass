@@ -4,18 +4,20 @@ import random
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
+import auth
 import db
 from db import get_db, kst_now as get_kst_now, DEMO_USER_ID
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
 db.init_app(app)
+auth.init_app(app)
 
 DEFAULT_USER_ID = DEMO_USER_ID
 PTU_GATE_LAT = 36.9961
 PTU_GATE_LON = 127.1328
 
-db.init_db(app.config['DB_PATH'])
+db.init_db(app.config['DB_PATH'], demo_password_hash=auth.demo_password_hash())
 
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371.0

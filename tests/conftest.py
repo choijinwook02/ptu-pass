@@ -9,6 +9,7 @@ _IMPORT_DB = os.path.join(tempfile.mkdtemp(prefix="ptu-import-"), "import.db")
 os.environ["PTU_DB_PATH"] = _IMPORT_DB
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import auth  # noqa: E402
 import db  # noqa: E402
 from app import app as flask_app  # noqa: E402
 
@@ -21,7 +22,7 @@ def db_path(tmp_path):
 @pytest.fixture
 def app(db_path):
     flask_app.config.update(TESTING=True, DB_PATH=db_path)
-    db.init_db(db_path)
+    db.init_db(db_path, demo_password_hash=auth.demo_password_hash())
     yield flask_app
 
 
