@@ -1,58 +1,21 @@
 import os
-import sqlite3
 import math
 import random
-from datetime import datetime, timedelta, timezone
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
+import db
+from db import get_db, kst_now as get_kst_now, DEMO_USER_ID
+
 app = Flask(__name__, static_folder='static')
 CORS(app)
+db.init_app(app)
 
-DB_PATH = 'commute.db'
-DEFAULT_USER_ID = 'DEMO_TEAM'
+DEFAULT_USER_ID = DEMO_USER_ID
 PTU_GATE_LAT = 36.9961
 PTU_GATE_LON = 127.1328
 
-def get_kst_now():
-    return datetime.now(timezone.utc) + timedelta(hours=9)
-
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS USERS (
-        user_id TEXT PRIMARY KEY,
-        name TEXT,
-        dept TEXT,
-        wallet_balance INTEGER DEFAULT 7500,
-        total_distance REAL DEFAULT 112.5,
-        early_count INTEGER DEFAULT 4
-    )
-    ''')
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS COMMUTE_LOGS (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT,
-        log_type TEXT,
-        origin_label TEXT,
-        distance_km REAL,
-        speed_kmh REAL,
-        status TEXT,
-        description TEXT,
-        points INTEGER,
-        created_at TEXT
-    )
-    ''')
-    cursor.execute(
-        "INSERT OR IGNORE INTO USERS (user_id, name, dept, wallet_balance, total_distance, early_count) VALUES (?, ?, ?, ?, ?, ?)",
-        (DEFAULT_USER_ID, '시연 자료 팀', '융합복합시스템 연구반', 7500, 112.5, 4)
-    )
-    cursor.execute("UPDATE USERS SET name = '시연 자료 팀' WHERE user_id = ?", (DEFAULT_USER_ID,))
-    conn.commit()
-    conn.close()
-
-init_db()
+db.init_db(app.config['DB_PATH'])
 
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371.0
@@ -81,11 +44,10 @@ def health_check():
 @app.route('/api/wallet', defaults={'user_id': DEFAULT_USER_ID}, methods=['GET'])
 @app.route('/api/wallet/<user_id>', methods=['GET'])
 def get_wallet(user_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT name, dept, wallet_balance, total_distance, early_count FROM USERS WHERE user_id = ?", (DEFAULT_USER_ID,))
     row = cursor.fetchone()
-    conn.close()
     return jsonify({
         "name": row[0],
         "dept": row[1],
@@ -112,7 +74,7 @@ def verify_commute():
     distance_km = calculate_distance(start_lat, start_lon, end_lat, end_lon)
     speed_kmh = float(data.get('speed_kmh', (distance_km / (duration_minutes / 60)) if duration_minutes > 0 else 0))
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     cursor = conn.cursor()
 
     # 1. GPS 스푸핑(위치 변조) 차단
@@ -123,7 +85,6 @@ def verify_commute():
             (DEFAULT_USER_ID, 'BLOCK_SPOOF', origin_label, round(distance_km, 2), round(speed_kmh, 1), '스푸핑 차단', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
         )
         conn.commit()
-        conn.close()
         return jsonify({"status": "REJECTED", "badge": "스푸핑 차단", "reason": reason})
 
     # 2. 대중교통 결제 내역 미존재 차단
@@ -134,7 +95,6 @@ def verify_commute():
             (DEFAULT_USER_ID, 'BLOCK_NOPAY', origin_label, round(distance_km, 2), round(speed_kmh, 1), '지급 거부', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
         )
         conn.commit()
-        conn.close()
         return jsonify({"status": "REJECTED", "badge": "지급 거부", "reason": reason})
 
     # 3. 1.0km 미만 단거리 도보 통학 차단
@@ -145,7 +105,6 @@ def verify_commute():
             (DEFAULT_USER_ID, 'BLOCK_WALK', origin_label, round(distance_km, 2), round(speed_kmh, 1), '지급 거부', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
         )
         conn.commit()
-        conn.close()
         return jsonify({"status": "REJECTED", "badge": "지급 거부", "reason": reason})
 
     # 4. 정상 승인 및 동적 마일리지 산출
@@ -167,7 +126,6 @@ def verify_commute():
         (DEFAULT_USER_ID, 'EARN', origin_label, round(distance_km, 2), round(speed_kmh, 1), '정상 승인', reason, total_reward, kst_now.strftime("%Y-%m-%d %H:%M"))
     )
     conn.commit()
-    conn.close()
 
     return jsonify({
         "status": "APPROVED",
@@ -188,13 +146,12 @@ def exchange_coupon():
     item_name = data.get('item_name', '교내 제휴 쿠폰')
     cost = int(data.get('cost', 0))
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT wallet_balance FROM USERS WHERE user_id = ?", (DEFAULT_USER_ID,))
     current_balance = cursor.fetchone()[0]
 
     if current_balance < cost:
-        conn.close()
         return jsonify({"status": "FAILED", "reason": "보유 마일리지가 부족합니다.", "balance": current_balance}), 400
 
     new_balance = current_balance - cost
@@ -204,7 +161,6 @@ def exchange_coupon():
         (DEFAULT_USER_ID, 'SPEND', '교내 제휴처', 0, 0, '사용 완료', f'{item_name} 발급', -cost, get_kst_now().strftime("%Y-%m-%d %H:%M"))
     )
     conn.commit()
-    conn.close()
 
     return jsonify({
         "status": "SUCCESS",
@@ -217,22 +173,20 @@ def exchange_coupon():
 # [API 6] 발표 리허설용 데이터 초기화 (7,500P 복구)
 @app.route('/api/reset', methods=['POST'])
 def reset_wallet():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     cursor = conn.cursor()
     cursor.execute("UPDATE USERS SET wallet_balance = 7500, total_distance = 112.5, early_count = 4 WHERE user_id = ?", (DEFAULT_USER_ID,))
     cursor.execute("DELETE FROM COMMUTE_LOGS WHERE user_id = ?", (DEFAULT_USER_ID,))
     conn.commit()
-    conn.close()
     return jsonify({"status": "RESET_COMPLETE", "new_balance": 7500})
 
 # [API 7] 실시간 검증 및 입출금 로그 조회
 @app.route('/api/logs', methods=['GET'])
 def get_logs():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at FROM COMMUTE_LOGS ORDER BY id DESC LIMIT 15")
     rows = cursor.fetchall()
-    conn.close()
     logs = [{
         "log_type": r[0], "origin_label": r[1], "distance_km": r[2],
         "speed_kmh": r[3], "status": r[4], "description": r[5], "points": r[6], "created_at": r[7]
@@ -261,11 +215,10 @@ def get_fraud_stats():
 # [API 10] 실용적 통학 편익 지표 (정류장 대기시간 단축 및 식비·교통비 환급 혜택)
 @app.route('/api/stats/benefit', methods=['GET'])
 def get_practical_benefit():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT wallet_balance, total_distance, early_count FROM USERS WHERE user_id = ?", (DEFAULT_USER_ID,))
     row = cursor.fetchone()
-    conn.close()
     balance = row[0] if row else 7500
     total_km = row[1] if row else 112.5
     early_cnt = row[2] if row else 4
