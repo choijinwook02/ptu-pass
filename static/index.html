@@ -160,28 +160,54 @@
     }
 
     .wallet-card-holo {
-      background: var(--primary-gradient); border-radius: 18px; padding: 22px; color: white;
-      box-shadow: 0 12px 30px -4px rgba(37,99,235,0.4), var(--glow); position: relative; overflow: hidden; margin-bottom: 16px;
+      background: var(--primary-gradient); border-radius: 18px; padding: 20px 22px; color: white;
+      box-shadow: 0 12px 30px -4px rgba(37,99,235,0.4), var(--glow); position: relative; overflow: hidden; margin-bottom: 14px;
     }
     .wallet-card-holo::after {
       content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
       background: linear-gradient(60deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%);
       transform: rotate(25deg); animation: holoSheen 6s infinite; pointer-events: none;
     }
-    .wallet-val { font-size: 36px; font-weight: 900; letter-spacing: -0.5px; display: flex; align-items: baseline; gap: 6px; }
+    .wallet-val { font-size: 34px; font-weight: 900; letter-spacing: -0.5px; display: flex; align-items: baseline; gap: 6px; }
     .wallet-val span { font-size: 18px; font-weight: 700; opacity: 0.9; }
+
+    /* ================= 학식(6,500P) & 카페(3,000P) 교환 달성률 게이지 바 ================= */
+    .gauge-container {
+      background: rgba(37, 99, 235, 0.04); border: 1px solid var(--card-border); border-radius: 14px;
+      padding: 13px 15px; margin-bottom: 14px;
+    }
+    .gauge-item { margin-bottom: 11px; }
+    .gauge-item:last-child { margin-bottom: 0; }
+    .gauge-header {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; font-weight: 800; margin-bottom: 5px;
+    }
+    .gauge-track {
+      width: 100%; height: 9px; background: rgba(148, 163, 184, 0.22);
+      border-radius: 99px; overflow: hidden; position: relative;
+    }
+    .gauge-fill {
+      height: 100%; border-radius: 99px;
+      transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1), background 0.3s ease;
+    }
+    .gauge-fill.cafe { background: linear-gradient(90deg, #0ea5e9, #10b981); }
+    .gauge-fill.meal { background: linear-gradient(90deg, #2563eb, #8b5cf6); }
+    .gauge-badge {
+      font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 6px;
+      cursor: pointer;
+    }
 
     .hud-panel {
       background: rgba(0,0,0,0.03); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px; margin-bottom: 14px;
     }
     [data-theme="dark"] .hud-panel { background: rgba(255,255,255,0.03); }
-    .hud-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 8px; }
+    .hud-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; margin-bottom: 8px; }
     .hud-row:last-child { margin-bottom: 0; }
     .hud-label { color: var(--text-muted); font-weight: 600; }
     .hud-val { font-weight: 800; color: var(--text-main); }
 
     .cyber-btn {
-      width: 100%; border: none; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 800;
+      width: 100%; border: none; padding: 13.5px; border-radius: 12px; font-size: 14px; font-weight: 800;
       cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;
       transition: all 0.2s ease; margin-bottom: 8px;
     }
@@ -315,11 +341,9 @@
     .logout-btn:hover { background: rgba(239,68,68,0.12); color: var(--danger); }
     .nav-item, .header-wallet { white-space: nowrap; }
     .nav-item { padding: 8px 10px; }
-    /* 사용자 칩 공간 확보: 서버 상태는 점만 표시하고 문구는 툴팁으로 */
     .server-pill { padding: 6px; }
     .server-pill > span:not(.pulse-dot) { display: none; }
     @media (max-width: 1100px) { .server-pill { display: none; } .nav-item { padding: 8px 8px; } }
-    /* 좁은 화면: 이름은 숨기고 로그아웃 버튼만 (이름은 지갑 카드에 표시됨) */
     @media (max-width: 1100px) {
       .user-chip { padding: 4px; }
       .user-chip .js-user-name, .user-chip > .fa-circle-user { display: none; }
@@ -375,7 +399,6 @@
     </div>
   </div>
 
-
   <!-- 실시간 토스트 알림 컨테이너 -->
   <div id="toastContainer"></div>
 
@@ -396,7 +419,7 @@
       </ul>
 
       <div class="nav-right">
-        <div class="server-pill" title="시연 자료 팀 · 15개 백엔드 REST API 정상 가동 중">
+        <div class="server-pill" title="시연 자료 팀 · 5중 보안 및 15개 백엔드 REST API 정상 가동 중">
           <span class="pulse-dot"></span>
           <span>API 온라인</span>
         </div>
@@ -465,19 +488,20 @@
 
         <div class="preset-bar">
           <span style="font-size: 12px; font-weight: 800; color: var(--primary);">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> 발표 시연용 주행 시뮬레이션 프리셋:
+            <i class="fa-solid fa-wand-magic-sparkles"></i> 발표 시연용 주행 & 어뷰징 차단 프리셋:
           </span>
           <div class="preset-btns">
-            <button class="preset-btn" onclick="applyPreset('suwon')">🚌 수원 영통역 출발 (28.4km · 주행 애니메이션)</button>
-            <button class="preset-btn" onclick="applyPreset('pyeongtaek')">🚆 평택역 환승센터 출발 (4.3km · 정상승인)</button>
-            <button class="preset-btn" onclick="applyPreset('dorm')">🚶 평택대 기숙사 출발 (0.35km · 레드존 차단)</button>
-            <button class="preset-btn" onclick="applyPreset('spoof')">⚡ GPS 스푸핑 공격 (시속 285km · 조작 차단)</button>
+            <button class="preset-btn" onclick="applyPreset('suwon')">🚌 수원 영통역 (28.4km · 정상승인)</button>
+            <button class="preset-btn" onclick="applyPreset('pyeongtaek')">🚆 평택역 환승센터 (4.3km · 정상승인)</button>
+            <button class="preset-btn" onclick="applyPreset('dorm')">🚶 평택대 기숙사 (0.35km · 레드존 차단)</button>
+            <button class="preset-btn" onclick="applyPreset('proxy')" style="border-color: var(--danger); color: var(--danger);">📱 타인 기기 대리출석 시도 (기기식별 차단)</button>
+            <button class="preset-btn" onclick="applyPreset('spoof')">⚡ GPS 스푸핑 공격 (시속 285km · 조작차단)</button>
           </div>
         </div>
       </div>
 
       <div class="grid-2">
-        <!-- 마일리지 홀로그램 카드 -->
+        <!-- 마일리지 홀로그램 카드 & 학식/카페 달성률 게이지 바 -->
         <div class="card">
           <div class="card-title">
             <span>스마트 통학 마일리지 지갑</span>
@@ -486,19 +510,43 @@
           <div class="wallet-card-holo">
             <div style="font-size: 12px; opacity: 0.85; margin-bottom: 4px;">사용 가능 잔액</div>
             <div class="wallet-val"><span id="mainBalance">0</span><span>P</span></div>
-            <div style="font-size: 12px; margin-top: 12px; opacity: 0.9; display: flex; justify-content: space-between;">
+            <div style="font-size: 12px; margin-top: 10px; opacity: 0.9; display: flex; justify-content: space-between;">
               <span id="teamNameDisplay" class="js-user-name">-</span>
               <span>1P = 1원 교내 현금성 사용</span>
             </div>
           </div>
-          <div class="hud-panel">
+
+          <!-- 학식(6,500P) & 카페(3,000P) 실시간 달성률 게이지 바 -->
+          <div class="gauge-container">
+            <div class="gauge-item">
+              <div class="gauge-header">
+                <span><i class="fa-solid fa-mug-hot" style="color: var(--accent); margin-right: 4px;"></i> 교내 카페 음료권 (3,000 P)</span>
+                <span id="cafeGaugeText" class="gauge-badge" style="background: rgba(16,185,129,0.15); color: var(--success);" onclick="switchTab('shop')">0%</span>
+              </div>
+              <div class="gauge-track">
+                <div id="cafeGaugeBar" class="gauge-fill cafe" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <div class="gauge-item">
+              <div class="gauge-header">
+                <span><i class="fa-solid fa-utensils" style="color: var(--primary); margin-right: 4px;"></i> 학생식당 1식 식권 (6,500 P)</span>
+                <span id="mealGaugeText" class="gauge-badge" style="background: rgba(37,99,235,0.15); color: var(--primary);" onclick="switchTab('shop')">0%</span>
+              </div>
+              <div class="gauge-track">
+                <div id="mealGaugeBar" class="gauge-fill meal" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hud-panel" style="margin-bottom: 0;">
             <div class="hud-row">
-              <span class="hud-label">연동 교통카드:</span>
-              <span class="hud-val" style="color: var(--success);"><i class="fa-solid fa-check"></i> KB국민 K-패스 (5421-****)</span>
+              <span class="hud-label">대리출석 방지 기기식별(UUID):</span>
+              <span class="hud-val" id="deviceUuidBadge" style="color: var(--success);"><i class="fa-solid fa-mobile-screen-button"></i> 본인 단말기 인증됨</span>
             </div>
             <div class="hud-row">
               <span class="hud-label">누적 통학 거리 / 식비·카페 환급 혜택:</span>
-              <span class="hud-val" id="benefitSummaryText">112.5 km / 7,500원 상당 환급</span>
+              <span class="hud-val" id="benefitSummaryText">0 km / 0원 상당 환급</span>
             </div>
             <div class="hud-row">
               <span class="hud-label">도착 시각 기준 모드:</span>
@@ -513,7 +561,7 @@
         <!-- 실시간 GPS 측정 & 검증 컨트롤러 -->
         <div class="card">
           <div class="card-title">
-            <span>실시간 결제·GPS 교차 검증</span>
+            <span>실시간 결제·GPS·기기식별 교차 검증</span>
             <i class="fa-solid fa-satellite-dish" style="color: var(--primary);"></i>
           </div>
 
@@ -529,6 +577,15 @@
             <div class="hud-row">
               <span class="hud-label">대중교통 결제 트랜잭션:</span>
               <span class="hud-val" id="transitTagStatus" style="color: var(--danger);">미태그 (승차 기록 없음)</span>
+            </div>
+            <div class="hud-row">
+              <span class="hud-label">1일 1회 중복 적립 차단 정책:</span>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span id="dailyLimitStatus" style="font-size: 11.5px; font-weight: 800; color: var(--success);">오늘 적립 가능 (0/1회)</span>
+                <label style="font-size: 11px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 3px;" title="체크 해제 시 발표 시연에서 여러 번 연속 적립할 수 있습니다.">
+                  <input type="checkbox" id="enforceDailyLimitChk" checked> 1일1회 제한 적용
+                </label>
+              </div>
             </div>
           </div>
 
@@ -567,7 +624,7 @@
               </tr>
             </thead>
             <tbody id="historyTbody">
-              </tbody>
+            </tbody>
           </table>
         </div>
       </div>
@@ -584,9 +641,9 @@
           <div style="font-size: 11px; color: var(--success); font-weight: 700;">08시 이전 조기 등교 분산 유도 효과</div>
         </div>
         <div class="card" style="margin-bottom:0; text-align:center;">
-          <div style="font-size: 12px; color: var(--text-muted); font-weight: 700;">부정 수급(도보·스푸핑) 차단율</div>
+          <div style="font-size: 12px; color: var(--text-muted); font-weight: 700;">부정 수급(도보·대리출석·중복) 차단율</div>
           <div style="font-size: 28px; font-weight: 900; color: var(--success); margin: 4px 0;" id="kpiFraudRate">98.5% 차단</div>
-          <div style="font-size: 11px; color: var(--text-muted);">결제 트랜잭션 × GPS 속도 벡터 대조</div>
+          <div style="font-size: 11px; color: var(--text-muted);">결제 × GPS × 기기UUID × 1일1회 검증</div>
         </div>
         <div class="card" style="margin-bottom:0; text-align:center;">
           <div style="font-size: 12px; color: var(--text-muted); font-weight: 700;">피크타임 정류장 승차 대기시간</div>
@@ -632,9 +689,9 @@
               <tr><th>순위</th><th>소속 학과(부)</th><th>참여 학생 수</th><th>평균 대기시간 단축</th><th>누적 적립 마일리지 (식비·카페 환급)</th></tr>
             </thead>
             <tbody id="deptLeaderboardBody">
-              <tr><td>🥇 1위</td><td><b>융합모빌리티공학부</b></td><td>218명</td><td>15.2분 단축</td><td style="font-weight:800; color:var(--primary);">482,500 P</td></tr>
+              <tr><td>🥇 1위</td><td><b>융합소프트웨어학과</b></td><td>218명</td><td>15.2분 단축</td><td style="font-weight:800; color:var(--primary);">482,500 P</td></tr>
               <tr><td>🥈 2위</td><td><b>정보통신학과</b></td><td>195명</td><td>14.5분 단축</td><td style="font-weight:800; color:var(--primary);">451,200 P</td></tr>
-              <tr><td>🥉 3위</td><td><b>컴퓨터소프트웨어학과</b></td><td>184명</td><td>13.8분 단축</td><td style="font-weight:800; color:var(--primary);">398,000 P</td></tr>
+              <tr><td>🥉 3위</td><td><b>스마트모빌리티학과</b></td><td>184명</td><td>13.8분 단축</td><td style="font-weight:800; color:var(--primary);">398,000 P</td></tr>
               <tr><td>4위</td><td>국제물류학과</td><td>156명</td><td>12.9분 단축</td><td style="font-weight:800;">342,100 P</td></tr>
               <tr><td>5위</td><td>간호학과</td><td>142명</td><td>11.5분 단축</td><td style="font-weight:800;">289,400 P</td></tr>
             </tbody>
@@ -650,14 +707,14 @@
         <div class="wallet-card-holo">
           <div style="font-size: 13px; opacity: 0.85;"><span class="js-user-name">-</span> · 총 보유 마일리지</div>
           <div class="wallet-val"><span id="subBalance">0</span><span>P</span></div>
-          <div style="font-size: 12px; margin-top: 10px; opacity: 0.9;">연동 계좌/카드: KB국민 K-패스 체크 (정상 연동 중)</div>
+          <div style="font-size: 12px; margin-top: 10px; opacity: 0.9;">연동 계좌/카드: KB국민 K-패스 체크 | 등록 기기: <span id="walletDeviceIdText">PTU-DEV</span></div>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           <button class="cyber-btn btn-gps" style="flex: 1; margin-bottom:0;" onclick="openBarcodeModal('교내 통합 마일리지 현장 결제 바코드', '보유 잔액 한도 내 즉시 차감')">
             <i class="fa-solid fa-qrcode"></i> 현장 결제 바코드 띄우기
           </button>
           <button id="resetDemoBtn" class="cyber-btn btn-transit" style="flex: 1; margin-bottom:0;" onclick="resetDemoData()">
-            <i class="fa-solid fa-rotate-left"></i> 시연 데이터 초기화 (7,500P 리셋)
+            <i class="fa-solid fa-rotate-left"></i> 시연 데이터 초기화 (7,500P & 1일제한 리셋)
           </button>
         </div>
       </div>
@@ -673,7 +730,7 @@
               <tr><th>일시</th><th>구분</th><th>상세 항목</th><th>변동 마일리지</th><th>비고</th></tr>
             </thead>
             <tbody id="walletLedgerBody">
-              </tbody>
+            </tbody>
           </table>
         </div>
       </div>
@@ -721,26 +778,26 @@
     <div id="tab-guide" class="tab-content">
       <div class="grid-3">
         <div class="card" style="margin-bottom:0; text-align:center;">
-          <div style="font-size: 26px; font-weight: 900; color: var(--primary);">1.0 km 이상</div>
-          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">최소 유효 통학 인정 거리 (도보 차단)</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--primary);">1.0km & 기기UUID</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">도보 통학 차단 및 단말기 대리출석 방지</div>
         </div>
         <div class="card" style="margin-bottom:0; text-align:center;">
-          <div style="font-size: 26px; font-weight: 900; color: var(--success);">+200 P + 50P/km</div>
-          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">08시 이전 조기등교 및 거리 비례 수식</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--success);">1일 1회 적립 제한</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">당일 중복 클릭 및 반복 수급 원천 차단</div>
         </div>
         <div class="card" style="margin-bottom:0; text-align:center;">
-          <div style="font-size: 26px; font-weight: 900; color: var(--danger);">150 km/h 상한</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--danger);">150 km/h 상한</div>
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">GPS 스푸핑(순간이동 조작) 원천 차단</div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title"><span>시연 자료 팀 · 결제·GPS 교차 검증 알고리즘 및 실용적 기대 효과</span></div>
+        <div class="card-title"><span>시연 자료 팀 · 5중 보안 교차 검증 알고리즘 및 실용적 기대 효과</span></div>
         <div style="font-size: 13.5px; line-height: 1.85; color: var(--text-main);">
-          <p><b>1. Haversine 기반 실제 통학 거리 산출 (`/api/verify`):</b> 스마트폰 Geolocation 센서로 수집한 출발지 위·경도와 평택대학교 정문(36.9961, 127.1328) 간의 대원 거리를 산출합니다.</p>
-          <p><b>2. 기숙사·인근 도보 통학 레드존 필터링:</b> 측정 거리가 1.0km 미만이거나 대중교통 카드 승·하차 결제 트랜잭션이 존재하지 않는 경우, 대중교통 혼잡 완화와 무관한 도보 이동으로 판정하여 보상을 거부합니다.</p>
-          <p><b>3. GPS 위치 변조(Spoofing) 탐지:</b> 이동 소요 시간 대비 속도가 시속 150km를 초과하는 비정상 속도 벡터 감지 시 위치 조작 앱 사용으로 판정하여 즉시 차단합니다.</p>
-          <p><b>4. 정류장 승차 대기시간 단축 및 식비 절감 (`/api/stats/benefit`):</b> 오전 8~9시 피크타임 집중 수요를 8시 이전으로 분산하여 평택역·안성IC 정류장의 승차 대기시간을 평균 14.5분 단축하고, 적립된 마일리지를 학생식당(6,500원) 및 교내 카페(3,000원)로 환원해 학생들의 실질 생계비 부담을 낮춥니다.</p>
+          <p><b>1. 단말기 고유 식별 기반 대리 출석 차단 (Device Binding):</b> 로그인한 학번에 최초 귀속된 스마트폰의 기기 식별값(UUID)과 인증 요청 단말기의 식별값을 대조하여, 타인 기기로 대신 로그인해 대리 출석하는 어뷰징을 원천 차단합니다.</p>
+          <p><b>2. 1일 1회 중복 적립 제한:</b> 동일 일자(`YYYY-MM-DD`)에 이미 마일리지 적립 승인이 완료된 경우 추가 검증 요청을 거부하여 중복 수급을 막습니다.</p>
+          <p><b>3. 기숙사·인근 도보 통학 레드존(1.0km) 및 스푸핑(150km/h) 필터링:</b> 캠퍼스 정문 반경 1.0km 이내 도보 출발이나 시속 150km를 초과하는 GPS 위치 조작 앱 사용을 실시간으로 차단합니다.</p>
+          <p><b>4. 정류장 승차 대기시간 단축 및 식비 절감 (`/api/stats/benefit`):</b> 오전 8~9시 피크타임 집중 수요를 8시 이전으로 분산하여 평택역·안성IC 정류장의 승차 대기시간을 평균 14.5분 단축하고, 적립된 마일리지를 학생식당(6,500원) 및 교내 카페(3,000원) 달성률 게이지 바로 시각화해 자발적 참여를 유도합니다.</p>
         </div>
       </div>
     </div>
@@ -778,6 +835,83 @@
     let currentOriginLabel = "실제 GPS 측정 위치";
     let isTransitTagged = false;
 
+    // 1. 대리 출석 방지용 단말기 고유 UUID 생성 및 유지
+    let myDeviceUuid = localStorage.getItem('ptu_device_uuid');
+    if (!myDeviceUuid) {
+      myDeviceUuid = 'PTU-DEV-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      localStorage.setItem('ptu_device_uuid', myDeviceUuid);
+    }
+    let activeDeviceUuid = myDeviceUuid;
+    let hasEarnedTodayLocal = false;
+
+    function updateDeviceHudDisplay() {
+      const badge = document.getElementById('deviceUuidBadge');
+      const walletDevText = document.getElementById('walletDeviceIdText');
+      if (walletDevText) walletDevText.innerText = myDeviceUuid;
+      if (!badge) return;
+
+      if (activeDeviceUuid === myDeviceUuid) {
+        badge.innerHTML = `<i class="fa-solid fa-mobile-screen-button"></i> ${myDeviceUuid} (본인 기기)`;
+        badge.style.color = "var(--success)";
+      } else {
+        badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${activeDeviceUuid} (미등록 타인 기기)`;
+        badge.style.color = "var(--danger)";
+      }
+    }
+    updateDeviceHudDisplay();
+
+    // 2. 학식(6,500P) & 카페(3,000P) 달성률 게이지 바 업데이트 함수
+    function updateGaugeBars(balance) {
+      const cafePct = Math.min(100, Math.round((balance / 3000) * 100));
+      const cafeCount = Math.floor(balance / 3000);
+      const cafeBar = document.getElementById('cafeGaugeBar');
+      const cafeText = document.getElementById('cafeGaugeText');
+      if (cafeBar && cafeText) {
+        cafeBar.style.width = `${cafePct}%`;
+        if (cafeCount >= 1) {
+          cafeText.innerText = `100% · ${cafeCount}잔 즉시 교환 가능`;
+          cafeText.style.background = 'rgba(16,185,129,0.15)';
+          cafeText.style.color = 'var(--success)';
+        } else {
+          const remainCafe = Math.max(0, 3000 - balance);
+          cafeText.innerText = `${cafePct}% (교환까지 ${remainCafe.toLocaleString()}P 남음)`;
+          cafeText.style.background = 'rgba(245,158,11,0.15)';
+          cafeText.style.color = 'var(--warning)';
+        }
+      }
+
+      const mealPct = Math.min(100, Math.round((balance / 6500) * 100));
+      const mealCount = Math.floor(balance / 6500);
+      const mealBar = document.getElementById('mealGaugeBar');
+      const mealText = document.getElementById('mealGaugeText');
+      if (mealBar && mealText) {
+        mealBar.style.width = `${mealPct}%`;
+        if (mealCount >= 1) {
+          mealText.innerText = `100% · ${mealCount}식 즉시 교환 가능`;
+          mealText.style.background = 'rgba(37,99,235,0.15)';
+          mealText.style.color = 'var(--primary)';
+        } else {
+          const remainMeal = Math.max(0, 6500 - balance);
+          mealText.innerText = `${mealPct}% (식권까지 ${remainMeal.toLocaleString()}P 남음)`;
+          mealText.style.background = 'rgba(245,158,11,0.15)';
+          mealText.style.color = 'var(--warning)';
+        }
+      }
+    }
+
+    function updateDailyLimitHud(earnedToday) {
+      hasEarnedTodayLocal = earnedToday;
+      const el = document.getElementById('dailyLimitStatus');
+      if (!el) return;
+      if (earnedToday) {
+        el.innerText = "금일 적립 완료 (1/1회 · 추가차단)";
+        el.style.color = "var(--danger)";
+      } else {
+        el.innerText = "오늘 적립 가능 (0/1회)";
+        el.style.color = "var(--success)";
+      }
+    }
+
     function showToast(msg) {
       const container = document.getElementById('toastContainer');
       const el = document.createElement('div');
@@ -803,10 +937,13 @@
             document.getElementById('mainBalance').innerText = currentBalance.toLocaleString();
             document.getElementById('subBalance').innerText = currentBalance.toLocaleString();
             document.getElementById('navBalance').innerText = `${currentBalance.toLocaleString()} P`;
+            updateGaugeBars(currentBalance);
           }
           if (data.total_distance !== undefined) {
             document.getElementById('benefitSummaryText').innerText = `${data.total_distance} km / ${currentBalance.toLocaleString()}원 상당 환급`;
           }
+          const todayStr = new Date().toISOString().split('T')[0];
+          updateDailyLimitHud(data.last_earn_date === todayStr);
         }
       } catch (e) {}
     }
@@ -906,7 +1043,7 @@
       userMarker = L.marker([lat, lon]).addTo(map)
         .bindPopup(`<b>${label}</b><br>평택대까지 거리: ${calculatedDistKm} km`).openPopup();
 
-      const lineColor = calculatedDistKm < 1.0 || speedKmh > 150 ? '#ef4444' : '#0ea5e9';
+      const lineColor = (calculatedDistKm < 1.0 || speedKmh > 150 || activeDeviceUuid !== myDeviceUuid) ? '#ef4444' : '#0ea5e9';
       routeLine = L.polyline([[lat, lon], [PTU_LAT, PTU_LON]], { color: lineColor, weight: 4, dashArray: '6, 10' }).addTo(map);
       map.fitBounds([[lat, lon], [PTU_LAT, PTU_LON]], { padding: [45, 45] });
 
@@ -930,6 +1067,9 @@
         alert("브라우저가 GPS 기능을 지원하지 않습니다.");
         return;
       }
+      activeDeviceUuid = myDeviceUuid;
+      updateDeviceHudDisplay();
+
       const gpsBtn = document.getElementById('gpsBtn');
       const originalHtml = gpsBtn.innerHTML;
       gpsBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 위성 좌표 수신 중...';
@@ -948,6 +1088,8 @@
 
     function applyPreset(type) {
       if (type === 'suwon') {
+        activeDeviceUuid = myDeviceUuid;
+        updateDeviceHudDisplay();
         updateMapAndHud(37.2519, 127.0713, "수원 영통역 정류장", 44.8);
         isTransitTagged = true;
         const tagText = document.getElementById('transitTagStatus');
@@ -955,6 +1097,8 @@
         tagText.style.color = "var(--success)";
         showToast("수원 영통역 광역버스 통학 경로가 설정되었습니다.");
       } else if (type === 'pyeongtaek') {
+        activeDeviceUuid = myDeviceUuid;
+        updateDeviceHudDisplay();
         updateMapAndHud(36.9907, 127.0851, "평택역 광역환승센터", 32.5);
         isTransitTagged = true;
         const tagText = document.getElementById('transitTagStatus');
@@ -962,13 +1106,26 @@
         tagText.style.color = "var(--success)";
         showToast("평택역 시내버스 통학 경로가 설정되었습니다.");
       } else if (type === 'dorm') {
+        activeDeviceUuid = myDeviceUuid;
+        updateDeviceHudDisplay();
         updateMapAndHud(36.9982, 127.1345, "평택대 기숙사 인근", 3.8);
         isTransitTagged = false;
         const tagText = document.getElementById('transitTagStatus');
         tagText.innerText = "미태그 (대중교통 결제 내역 없음)";
         tagText.style.color = "var(--danger)";
         showToast("기숙사 도보 출발(1km 레드존 내부) 시나리오가 설정되었습니다.");
+      } else if (type === 'proxy') {
+        activeDeviceUuid = "UNREGISTERED-PROXY-99";
+        updateDeviceHudDisplay();
+        updateMapAndHud(37.2519, 127.0713, "수원 영통역 (타인 단말기 로그인)", 44.8);
+        isTransitTagged = true;
+        const tagText = document.getElementById('transitTagStatus');
+        tagText.innerText = "연동 완료 (단말기 기기식별 불일치 감지)";
+        tagText.style.color = "var(--danger)";
+        showToast("타인 스마트폰 대리 출석(미등록 UUID) 시나리오가 설정되었습니다.");
       } else if (type === 'spoof') {
+        activeDeviceUuid = myDeviceUuid;
+        updateDeviceHudDisplay();
         updateMapAndHud(37.4979, 127.0276, "서울 강남역 (위변조 신호)", 285.0);
         isTransitTagged = true;
         const tagText = document.getElementById('transitTagStatus');
@@ -987,6 +1144,7 @@
     }
 
     function animateBalance(start, end) {
+      updateGaugeBars(end);
       const duration = 600;
       let startTime = null;
       function step(timestamp) {
@@ -1011,6 +1169,7 @@
       const tbody = document.getElementById('historyTbody');
       const ledgerBody = document.getElementById('walletLedgerBody');
       const timeMode = document.getElementById('timeModeSelect').value;
+      const enforceDaily = document.getElementById('enforceDailyLimitChk').checked;
       const now = new Date();
       const isEarly = (timeMode === 'early') ? true : (now.getHours() < 8);
       const timeStr = isEarly ? "07:35" : `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -1037,7 +1196,9 @@
             end_lon: PTU_LON,
             speed_kmh: simulatedSpeedKmh,
             has_payment: isTransitTagged,
-            is_early: isEarly
+            is_early: isEarly,
+            device_id: activeDeviceUuid,
+            enforce_daily_limit: enforceDaily
           })
         });
         if (res.ok) {
@@ -1048,6 +1209,7 @@
             earnedPoints = serverData.earned_points;
             reasonText = serverData.reason;
             statusBadge = '<span class="tag tag-success">정상 승인</span>';
+            updateDailyLimitHud(true);
           } else {
             isSuccess = false;
             reasonText = serverData.reason;
@@ -1057,8 +1219,16 @@
           throw new Error("Fallback");
         }
       } catch (err) {
-        if (err.name === AUTH_ERR) return;   // 로그인 만료 → 로그인 화면이 이미 열림
-        if (simulatedSpeedKmh > 150) {
+        if (err.name === AUTH_ERR) return;
+        if (activeDeviceUuid !== myDeviceUuid) {
+          isSuccess = false;
+          statusBadge = '<span class="tag tag-danger">대리출석 차단</span>';
+          reasonText = `등록된 본인 단말기(${myDeviceUuid})와 기기 식별값(${activeDeviceUuid})이 불일치하여 대리 출석으로 차단되었습니다.`;
+        } else if (enforceDaily && hasEarnedTodayLocal) {
+          isSuccess = false;
+          statusBadge = '<span class="tag tag-danger">중복적립 차단</span>';
+          reasonText = `금일(${dateStr}) 이미 통학 마일리지가 적립되었습니다. (1일 1회 중복 수급 제한)`;
+        } else if (simulatedSpeedKmh > 150) {
           isSuccess = false;
           statusBadge = '<span class="tag tag-danger">스푸핑 차단</span>';
           reasonText = `비정상 이동 속도(${simulatedSpeedKmh}km/h) 감지 — GPS 위치 조작 차단`;
@@ -1074,7 +1244,8 @@
           isSuccess = true;
           statusBadge = '<span class="tag tag-success">정상 승인</span>';
           earnedPoints = baseReward + earlyBonus + distReward;
-          reasonText = `실제 거리 ${calculatedDistKm}km 및 대중교통 결제 교차 검증 일치`;
+          reasonText = `본인 기기(${myDeviceUuid}) · 실제 거리 ${calculatedDistKm}km · 대중교통 결제 교차 검증 일치`;
+          updateDailyLimitHud(true);
         }
       }
 
@@ -1085,7 +1256,7 @@
         alertBox.className = 'alert-panel alert-success';
         alertBox.innerHTML = `
           <div style="font-weight: 900; font-size: 14px; color: var(--success); margin-bottom: 4px;">
-            <i class="fa-solid fa-circle-check"></i> 교차 검증 통과 — 마일리지 적립 승인
+            <i class="fa-solid fa-circle-check"></i> 5중 보안 교차 검증 통과 — 마일리지 적립 승인 (금일 1/1회 완료)
           </div>
           <div>${reasonText}</div>
           <div class="receipt-box">
@@ -1111,12 +1282,12 @@
           </tr>
         `);
       } else {
-        showToast("오용 탐지 엔진에 의해 보상이 차단되었습니다.");
+        showToast("보안 및 오용 탐지 엔진에 의해 보상이 차단되었습니다.");
         alertBox.style.display = 'block';
         alertBox.className = 'alert-panel alert-danger';
         alertBox.innerHTML = `
           <div style="font-weight: 900; font-size: 14px; color: var(--danger); margin-bottom: 4px;">
-            <i class="fa-solid fa-triangle-exclamation"></i> 오용 탐지 엔진에 의해 보상이 거부되었습니다
+            <i class="fa-solid fa-triangle-exclamation"></i> 보안 및 오용 탐지 엔진에 의해 보상이 거부되었습니다
           </div>
           <div><b>차단 사유:</b> ${reasonText}</div>
         `;
@@ -1186,7 +1357,7 @@
       fraudChartInstance = new Chart(ctxFraud, {
         type: 'doughnut',
         data: {
-          labels: ["정상 대중교통 승인", "1km 미만 도보 차단", "결제 미태그 차단", "GPS 스푸핑 조작 차단"],
+          labels: ["정상 대중교통 승인", "1km 미만 도보 차단", "결제 미태그 차단", "대리출석·중복·스푸핑 차단"],
           datasets: [{
             data: [142, 34, 16, 8],
             backgroundColor: ['#10b981', '#ef4444', '#f59e0b', '#8b5cf6'],
@@ -1259,7 +1430,7 @@
         const res = await apiFetch('/api/exchange', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ coupon_id: couponId })   // 가격은 서버 카탈로그 기준
+          body: JSON.stringify({ coupon_id: couponId })
         });
         d = await res.json();
         if (!res.ok) {
@@ -1282,13 +1453,16 @@
     }
 
     async function resetDemoData() {
-      if (!confirm("시연 데이터를 초기 상태(보유 잔액 7,500 P)로 리셋하시겠습니까?")) return;
+      if (!confirm("시연 데이터를 초기 상태(보유 잔액 7,500 P 및 금일 1일 1회 적립 제한 해제)로 리셋하시겠습니까?")) return;
       try {
         const res = await apiFetch('/api/reset', { method: 'POST' });
         const d = await res.json();
         if (!res.ok) { showToast(d.reason || '초기화에 실패했습니다.'); return; }
         const prevBal = currentBalance;
         currentBalance = d.new_balance;
+        activeDeviceUuid = myDeviceUuid;
+        updateDeviceHudDisplay();
+        updateDailyLimitHud(false);
         animateBalance(prevBal, currentBalance);
         syncWalletFromServer();
         loadLogs();
@@ -1299,8 +1473,6 @@
     }
 
     // ================= 로그인 / 세션 =================
-
-    // 로그인이 필요한 API 호출용. 401이면 로그인 화면을 띄우고 AUTH_ERR를 던짐
     async function apiFetch(url, options = {}) {
       const res = await fetch(url, { credentials: 'same-origin', ...options });
       if (res.status === 401) {
@@ -1398,6 +1570,8 @@
       currentBalance = 0;
       ['mainBalance', 'subBalance'].forEach(id => document.getElementById(id).innerText = '0');
       document.getElementById('navBalance').innerText = '0 P';
+      updateGaugeBars(0);
+      updateDailyLimitHud(false);
       switchAuthTab('login');
       showAuthScreen('');
     }
@@ -1409,6 +1583,8 @@
       document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('authForm').reset();
       setAuthError('');
+      activeDeviceUuid = myDeviceUuid;
+      updateDeviceHudDisplay();
       syncWalletFromServer();
       loadLogs();
       if (isNew) showToast(`${user.name}님, 가입을 환영합니다!`);
@@ -1422,7 +1598,6 @@
       showAuthScreen('');
     }
 
-    // 서버에 저장된 본인 로그로 심사 원장/입출금 원장을 다시 그림
     async function loadLogs() {
       let logs;
       try {
