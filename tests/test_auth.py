@@ -120,3 +120,18 @@ def test_demo_password_from_env(monkeypatch, db_path, app):
     c = app.test_client()
     assert login(c, sid=db.DEMO_USER_ID, pw="demo1234").status_code == 401
     assert login(c, sid=db.DEMO_USER_ID, pw="presentation!").status_code == 200
+
+
+# ---------- 데모 원클릭 로그인 ----------
+
+def test_demo_one_click_login(client):
+    res = client.post("/api/auth/demo")
+    assert res.status_code == 200 and res.get_json()["user"]["student_id"] == db.DEMO_USER_ID
+    assert client.get("/api/wallet").get_json()["balance"] == 7500
+
+
+def test_demo_one_click_can_be_disabled(monkeypatch, client):
+    monkeypatch.setenv("DEMO_LOGIN_ENABLED", "0")
+    res = client.post("/api/auth/demo")
+    assert res.status_code == 403
+    assert client.get("/api/auth/me").status_code == 401

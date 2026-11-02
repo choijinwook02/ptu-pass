@@ -1,21 +1,28 @@
 import os
 import math
 import random
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, g
 from flask_cors import CORS
 
 import auth
+from auth import login_required
 import db
-from db import get_db, kst_now as get_kst_now, DEMO_USER_ID
+from db import get_db, kst_now as get_kst_now, DEMO_USER_ID, DEMO_INITIAL
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
 db.init_app(app)
 auth.init_app(app)
 
-DEFAULT_USER_ID = DEMO_USER_ID
 PTU_GATE_LAT = 36.9961
 PTU_GATE_LON = 127.1328
+
+COUPON_CATALOG = [
+    {"id": "CAFE_3000", "name": "교내 카페 3,000원 음료 교환권", "cost": 3000, "category": "CAFE"},
+    {"id": "MEAL_6500", "name": "학생식당 1식 식권 (6,500원)", "cost": 6500, "category": "FOOD"},
+    {"id": "PRINT_1500", "name": "학술정보관 인쇄·출력 50장권", "cost": 1500, "category": "STUDY"},
+]
+COUPONS_BY_ID = {c["id"]: c for c in COUPON_CATALOG}
 
 db.init_db(app.config['DB_PATH'], demo_password_hash=auth.demo_password_hash())
 
@@ -43,12 +50,12 @@ def health_check():
     })
 
 # [API 3] 전자지갑 잔액 및 누적 통학 실적 조회
-@app.route('/api/wallet', defaults={'user_id': DEFAULT_USER_ID}, methods=['GET'])
-@app.route('/api/wallet/<user_id>', methods=['GET'])
-def get_wallet(user_id):
+@app.route('/api/wallet', methods=['GET'])
+@login_required
+def get_wallet():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT name, dept, wallet_balance, total_distance, early_count FROM USERS WHERE user_id = ?", (DEFAULT_USER_ID,))
+    cursor.execute("SELECT name, dept, wallet_balance, total_distance, early_count FROM USERS WHERE user_id = ?", (g.user_id,))
     row = cursor.fetchone()
     return jsonify({
         "name": row[0],
@@ -60,6 +67,7 @@ def get_wallet(user_id):
 
 # [API 4] 실시간 GPS·결제 교차 검증 및 마일리지 적립
 @app.route('/api/verify', methods=['POST'])
+@login_required
 def verify_commute():
     data = request.json or {}
     origin_label = data.get('origin_label', '실제 단말기 GPS')
@@ -84,7 +92,7 @@ def verify_commute():
         reason = f"비정상 이동 속도({round(speed_kmh, 1)}km/h) 감지 — GPS 스푸핑(Mock Location) 차단"
         cursor.execute(
             "INSERT INTO COMMUTE_LOGS (user_id, log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (DEFAULT_USER_ID, 'BLOCK_SPOOF', origin_label, round(distance_km, 2), round(speed_kmh, 1), '스푸핑 차단', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
+            (g.user_id, 'BLOCK_SPOOF', origin_label, round(distance_km, 2), round(speed_kmh, 1), '스푸핑 차단', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
         )
         conn.commit()
         return jsonify({"status": "REJECTED", "badge": "스푸핑 차단", "reason": reason})
@@ -94,7 +102,7 @@ def verify_commute():
         reason = "대중교통 결제 트랜잭션 부재 (도보 이동 또는 카드 미태그 오용 차단)"
         cursor.execute(
             "INSERT INTO COMMUTE_LOGS (user_id, log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (DEFAULT_USER_ID, 'BLOCK_NOPAY', origin_label, round(distance_km, 2), round(speed_kmh, 1), '지급 거부', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
+            (g.user_id, 'BLOCK_NOPAY', origin_label, round(distance_km, 2), round(speed_kmh, 1), '지급 거부', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
         )
         conn.commit()
         return jsonify({"status": "REJECTED", "badge": "지급 거부", "reason": reason})
@@ -104,7 +112,7 @@ def verify_commute():
         reason = f"평택대 정문까지 {round(distance_km, 2)}km (1.0km 미만 기숙사·인근 도보 통학 레드존 차단)"
         cursor.execute(
             "INSERT INTO COMMUTE_LOGS (user_id, log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (DEFAULT_USER_ID, 'BLOCK_WALK', origin_label, round(distance_km, 2), round(speed_kmh, 1), '지급 거부', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
+            (g.user_id, 'BLOCK_WALK', origin_label, round(distance_km, 2), round(speed_kmh, 1), '지급 거부', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
         )
         conn.commit()
         return jsonify({"status": "REJECTED", "badge": "지급 거부", "reason": reason})
@@ -118,14 +126,14 @@ def verify_commute():
 
     cursor.execute(
         "UPDATE USERS SET wallet_balance = wallet_balance + ?, total_distance = total_distance + ?, early_count = early_count + ? WHERE user_id = ?",
-        (total_reward, round(distance_km, 2), 1 if is_early_mode else 0, DEFAULT_USER_ID)
+        (total_reward, round(distance_km, 2), 1 if is_early_mode else 0, g.user_id)
     )
-    cursor.execute("SELECT wallet_balance FROM USERS WHERE user_id = ?", (DEFAULT_USER_ID,))
+    cursor.execute("SELECT wallet_balance FROM USERS WHERE user_id = ?", (g.user_id,))
     new_balance = cursor.fetchone()[0]
 
     cursor.execute(
         "INSERT INTO COMMUTE_LOGS (user_id, log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (DEFAULT_USER_ID, 'EARN', origin_label, round(distance_km, 2), round(speed_kmh, 1), '정상 승인', reason, total_reward, kst_now.strftime("%Y-%m-%d %H:%M"))
+        (g.user_id, 'EARN', origin_label, round(distance_km, 2), round(speed_kmh, 1), '정상 승인', reason, total_reward, kst_now.strftime("%Y-%m-%d %H:%M"))
     )
     conn.commit()
 
@@ -143,51 +151,61 @@ def verify_commute():
 
 # [API 5] 교내 사용처 모바일 쿠폰 발급 및 포인트 차감
 @app.route('/api/exchange', methods=['POST'])
+@login_required
 def exchange_coupon():
-    data = request.json or {}
-    item_name = data.get('item_name', '교내 제휴 쿠폰')
-    cost = int(data.get('cost', 0))
+    data = request.get_json(silent=True) or {}
+    coupon = COUPONS_BY_ID.get(data.get('coupon_id'))
+    if coupon is None:
+        return jsonify({"status": "FAILED", "reason": "존재하지 않는 쿠폰입니다."}), 400
+    cost = coupon["cost"]
 
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT wallet_balance FROM USERS WHERE user_id = ?", (DEFAULT_USER_ID,))
-    current_balance = cursor.fetchone()[0]
+    # 잔액 확인과 차감을 한 문장으로 처리해 동시 요청에도 잔액이 음수가 되지 않게 함
+    updated = conn.execute(
+        "UPDATE USERS SET wallet_balance = wallet_balance - ? WHERE user_id = ? AND wallet_balance >= ?",
+        (cost, g.user_id, cost),
+    ).rowcount
+    balance = conn.execute("SELECT wallet_balance FROM USERS WHERE user_id = ?", (g.user_id,)).fetchone()[0]
+    if updated == 0:
+        conn.rollback()
+        return jsonify({"status": "FAILED", "reason": "보유 마일리지가 부족합니다.", "balance": balance}), 400
 
-    if current_balance < cost:
-        return jsonify({"status": "FAILED", "reason": "보유 마일리지가 부족합니다.", "balance": current_balance}), 400
-
-    new_balance = current_balance - cost
-    cursor.execute("UPDATE USERS SET wallet_balance = ? WHERE user_id = ?", (new_balance, DEFAULT_USER_ID))
-    cursor.execute(
+    conn.execute(
         "INSERT INTO COMMUTE_LOGS (user_id, log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (DEFAULT_USER_ID, 'SPEND', '교내 제휴처', 0, 0, '사용 완료', f'{item_name} 발급', -cost, get_kst_now().strftime("%Y-%m-%d %H:%M"))
+        (g.user_id, 'SPEND', '교내 제휴처', 0, 0, '사용 완료', f'{coupon["name"]} 발급', -cost, get_kst_now().strftime("%Y-%m-%d %H:%M"))
     )
     conn.commit()
 
     return jsonify({
         "status": "SUCCESS",
-        "item_name": item_name,
+        "coupon_id": coupon["id"],
+        "item_name": coupon["name"],
         "deducted_points": cost,
-        "new_balance": new_balance,
+        "new_balance": balance,
         "voucher_code": f"PTU-{random.randint(1000,9999)}-{random.randint(1000,9999)}"
     })
 
 # [API 6] 발표 리허설용 데이터 초기화 (7,500P 복구)
 @app.route('/api/reset', methods=['POST'])
+@login_required
 def reset_wallet():
+    if g.user_id != DEMO_USER_ID:
+        return jsonify({"status": "FAILED", "reason": "시연 데이터 초기화는 데모 계정에서만 가능합니다."}), 403
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("UPDATE USERS SET wallet_balance = 7500, total_distance = 112.5, early_count = 4 WHERE user_id = ?", (DEFAULT_USER_ID,))
-    cursor.execute("DELETE FROM COMMUTE_LOGS WHERE user_id = ?", (DEFAULT_USER_ID,))
+    cursor.execute("UPDATE USERS SET wallet_balance = ?, total_distance = ?, early_count = ? WHERE user_id = ?",
+                   (DEMO_INITIAL["wallet_balance"], DEMO_INITIAL["total_distance"], DEMO_INITIAL["early_count"], DEMO_USER_ID))
+    cursor.execute("DELETE FROM COMMUTE_LOGS WHERE user_id = ?", (g.user_id,))
     conn.commit()
     return jsonify({"status": "RESET_COMPLETE", "new_balance": 7500})
 
 # [API 7] 실시간 검증 및 입출금 로그 조회
 @app.route('/api/logs', methods=['GET'])
+@login_required
 def get_logs():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at FROM COMMUTE_LOGS ORDER BY id DESC LIMIT 15")
+    cursor.execute("SELECT log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at FROM COMMUTE_LOGS WHERE user_id = ? ORDER BY id DESC LIMIT 15", (g.user_id,))
     rows = cursor.fetchall()
     logs = [{
         "log_type": r[0], "origin_label": r[1], "distance_km": r[2],
@@ -216,10 +234,11 @@ def get_fraud_stats():
 
 # [API 10] 실용적 통학 편익 지표 (정류장 대기시간 단축 및 식비·교통비 환급 혜택)
 @app.route('/api/stats/benefit', methods=['GET'])
+@login_required
 def get_practical_benefit():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT wallet_balance, total_distance, early_count FROM USERS WHERE user_id = ?", (DEFAULT_USER_ID,))
+    cursor.execute("SELECT wallet_balance, total_distance, early_count FROM USERS WHERE user_id = ?", (g.user_id,))
     row = cursor.fetchone()
     balance = row[0] if row else 7500
     total_km = row[1] if row else 112.5
@@ -280,13 +299,7 @@ def simulate_batch():
 # [API 14] 교내 제휴 상점 카탈로그 조회
 @app.route('/api/coupons/catalog', methods=['GET'])
 def get_coupons_catalog():
-    return jsonify({
-        "coupons": [
-            {"id": "CAFE_3000", "name": "교내 카페 3,000원 음료 교환권", "cost": 3000, "category": "CAFE"},
-            {"id": "MEAL_6500", "name": "학생식당 1식 식권 (6,500원)", "cost": 6500, "category": "FOOD"},
-            {"id": "PRINT_1500", "name": "학술정보관 인쇄·출력 50장권", "cost": 1500, "category": "STUDY"}
-        ]
-    })
+    return jsonify({"coupons": COUPON_CATALOG})
 
 # [API 15] 교차 검증 엔진 임계값 파라미터 명세
 @app.route('/api/system/spec', methods=['GET'])
