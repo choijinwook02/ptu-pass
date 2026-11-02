@@ -3,3 +3,4 @@ __pycache__/
 commute.db
 .pytest_cache/
 instance/
+.venv/
