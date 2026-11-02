@@ -36,3 +36,27 @@ def raw_db(app, db_path):
     conn = db.connect(db_path)
     yield conn
     conn.close()
+
+
+def _login(app, student_id, password):
+    c = app.test_client()
+    res = c.post("/api/auth/login", json={"student_id": student_id, "password": password})
+    assert res.status_code == 200, res.get_json()
+    return c
+
+
+@pytest.fixture
+def demo_client(app):
+    """데모 계정(DEMO_TEAM)으로 로그인된 클라이언트."""
+    return _login(app, db.DEMO_USER_ID, "demo1234")
+
+
+@pytest.fixture
+def make_user(app):
+    """학번별로 가입+로그인된 클라이언트를 만들어 주는 팩토리."""
+    def _make(student_id, name="테스트", password="commute2026"):
+        c = app.test_client()
+        res = c.post("/api/auth/signup", json={"student_id": student_id, "name": name, "password": password})
+        assert res.status_code == 201, res.get_json()
+        return c
+    return _make

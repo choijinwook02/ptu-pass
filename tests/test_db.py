@@ -89,38 +89,40 @@ def test_default_db_path_is_absolute():
     assert os.path.isabs(db.DEFAULT_DB_PATH)
 
 
-# ---------- 기존 API 회귀 ----------
+# ---------- 기존 API 회귀 (데모 계정으로 로그인) ----------
 
-def test_wallet(client):
-    data = client.get("/api/wallet").get_json()
+def test_wallet(demo_client):
+    data = demo_client.get("/api/wallet").get_json()
     assert data["balance"] == 7500 and data["name"] == "시연 자료 팀"
 
 
-def test_verify_approved_updates_balance_and_log(client):
-    res = client.post("/api/verify", json={**PYEONGTAEK_STN, "speed_kmh": 30,
-                                            "has_payment": True, "is_early": True}).get_json()
+def test_verify_approved_updates_balance_and_log(demo_client):
+    res = demo_client.post("/api/verify", json={**PYEONGTAEK_STN, "speed_kmh": 30,
+                                                 "has_payment": True, "is_early": True}).get_json()
     assert res["status"] == "APPROVED"
     assert res["new_balance"] == 7500 + res["earned_points"]
-    logs = client.get("/api/logs").get_json()["logs"]
+    logs = demo_client.get("/api/logs").get_json()["logs"]
     assert logs[0]["log_type"] == "EARN" and logs[0]["points"] == res["earned_points"]
 
 
-def test_verify_rejections(client):
-    spoof = client.post("/api/verify", json={**PYEONGTAEK_STN, "speed_kmh": 300, "has_payment": True}).get_json()
-    nopay = client.post("/api/verify", json={**PYEONGTAEK_STN, "speed_kmh": 30, "has_payment": False}).get_json()
-    walk = client.post("/api/verify", json={"start_lat": 36.9962, "start_lon": 127.1329,
-                                            "speed_kmh": 30, "has_payment": True}).get_json()
+def test_verify_rejections(demo_client):
+    c = demo_client
+    spoof = c.post("/api/verify", json={**PYEONGTAEK_STN, "speed_kmh": 300, "has_payment": True}).get_json()
+    nopay = c.post("/api/verify", json={**PYEONGTAEK_STN, "speed_kmh": 30, "has_payment": False}).get_json()
+    walk = c.post("/api/verify", json={"start_lat": 36.9962, "start_lon": 127.1329,
+                                       "speed_kmh": 30, "has_payment": True}).get_json()
     assert spoof["badge"] == "스푸핑 차단"
     assert nopay["status"] == "REJECTED"
     assert walk["status"] == "REJECTED" and "1.0km" in walk["reason"]
-    assert client.get("/api/wallet").get_json()["balance"] == 7500
+    assert c.get("/api/wallet").get_json()["balance"] == 7500
 
 
-def test_exchange_and_reset(client):
-    ok = client.post("/api/exchange", json={"item_name": "카페", "cost": 3000})
+def test_exchange_and_reset(demo_client):
+    c = demo_client
+    ok = c.post("/api/exchange", json={"coupon_id": "CAFE_3000"})
     assert ok.get_json()["new_balance"] == 4500
-    fail = client.post("/api/exchange", json={"item_name": "식권", "cost": 6500})
+    fail = c.post("/api/exchange", json={"coupon_id": "MEAL_6500"})
     assert fail.status_code == 400
-    client.post("/api/reset")
-    assert client.get("/api/wallet").get_json()["balance"] == 7500
-    assert client.get("/api/logs").get_json()["logs"] == []
+    c.post("/api/reset")
+    assert c.get("/api/wallet").get_json()["balance"] == 7500
+    assert c.get("/api/logs").get_json()["logs"] == []
