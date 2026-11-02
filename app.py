@@ -1,6 +1,7 @@
 import os
 import math
 import random
+import sqlite3
 from flask import Flask, request, jsonify, send_from_directory, g
 from flask_cors import CORS
 
@@ -26,6 +27,23 @@ COUPONS_BY_ID = {c["id"]: c for c in COUPON_CATALOG}
 
 db.init_db(app.config['DB_PATH'], demo_password_hash=auth.demo_password_hash())
 
+# db.py를 직접 수정하지 않고도 기기 식별 및 1일 1회 제한용 컬럼을 안전하게 추가
+def ensure_security_columns(db_path):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    for col_sql in [
+        "ALTER TABLE USERS ADD COLUMN registered_device_id TEXT DEFAULT ''",
+        "ALTER TABLE USERS ADD COLUMN last_earn_date TEXT DEFAULT ''"
+    ]:
+        try:
+            cursor.execute(col_sql)
+        except sqlite3.OperationalError:
+            pass
+    conn.commit()
+    conn.close()
+
+ensure_security_columns(app.config['DB_PATH'])
+
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371.0
     dlat = math.radians(lat2 - lat1)
@@ -46,26 +64,31 @@ def health_check():
         "status": "ONLINE",
         "team": "시연 자료 팀",
         "kst_time": get_kst_now().strftime("%Y-%m-%d %H:%M:%S"),
-        "engine_version": "v2.5-TDM-Practical"
+        "engine_version": "v2.6-TDM-Security"
     })
 
-# [API 3] 전자지갑 잔액 및 누적 통학 실적 조회
+# [API 3] 전자지갑 잔액, 누적 통학 실적 및 기기·적립일 상태 조회
 @app.route('/api/wallet', methods=['GET'])
 @login_required
 def get_wallet():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT name, dept, wallet_balance, total_distance, early_count FROM USERS WHERE user_id = ?", (g.user_id,))
+    cursor.execute(
+        "SELECT name, dept, wallet_balance, total_distance, early_count, registered_device_id, last_earn_date FROM USERS WHERE user_id = ?",
+        (g.user_id,)
+    )
     row = cursor.fetchone()
     return jsonify({
         "name": row[0],
         "dept": row[1],
         "balance": row[2],
         "total_distance": round(row[3], 1),
-        "early_count": row[4]
+        "early_count": row[4],
+        "registered_device_id": row[5] or "",
+        "last_earn_date": row[6] or ""
     })
 
-# [API 4] 실시간 GPS·결제 교차 검증 및 마일리지 적립
+# [API 4] 실시간 GPS·결제·기기식별·1일1회 교차 검증 및 마일리지 적립
 @app.route('/api/verify', methods=['POST'])
 @login_required
 def verify_commute():
@@ -77,8 +100,11 @@ def verify_commute():
     end_lon = float(data.get('end_lon', PTU_GATE_LON))
     duration_minutes = float(data.get('duration_minutes', 38))
     has_payment = data.get('has_payment', False)
+    client_device_id = data.get('device_id', 'PTU-DEV-DEFAULT')
+    enforce_daily_limit = data.get('enforce_daily_limit', True)
 
     kst_now = get_kst_now()
+    today_str = kst_now.strftime("%Y-%m-%d")
     is_early_mode = data.get('is_early', kst_now.hour < 8)
 
     distance_km = calculate_distance(start_lat, start_lon, end_lat, end_lon)
@@ -86,6 +112,36 @@ def verify_commute():
 
     conn = get_db()
     cursor = conn.cursor()
+    cursor.execute("SELECT registered_device_id, last_earn_date FROM USERS WHERE user_id = ?", (g.user_id,))
+    user_row = cursor.fetchone()
+    reg_device_id = (user_row[0] or "") if user_row else ""
+    last_earn_date = (user_row[1] or "") if user_row else ""
+
+    # 최초 인증 시 로그인한 사용자의 본인 단말기 UUID 자동 등록
+    if not reg_device_id and not client_device_id.startswith("UNREGISTERED"):
+        reg_device_id = client_device_id
+        cursor.execute("UPDATE USERS SET registered_device_id = ? WHERE user_id = ?", (reg_device_id, g.user_id))
+        conn.commit()
+
+    # 0-1. 대리 출석 방지용 기기 식별(Device Binding) 불일치 차단
+    if client_device_id.startswith("UNREGISTERED") or (reg_device_id and client_device_id != reg_device_id):
+        reason = f"등록된 본인 단말기({reg_device_id or '본인 기기'})와 기기 식별값({client_device_id})이 불일치하여 대리 출석으로 차단되었습니다."
+        cursor.execute(
+            "INSERT INTO COMMUTE_LOGS (user_id, log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (g.user_id, 'BLOCK_DEVICE', origin_label, round(distance_km, 2), round(speed_kmh, 1), '대리출석 차단', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
+        )
+        conn.commit()
+        return jsonify({"status": "REJECTED", "badge": "대리출석 차단", "reason": reason})
+
+    # 0-2. 1일 1회 중복 적립 제한 차단
+    if enforce_daily_limit and last_earn_date == today_str:
+        reason = f"금일({today_str}) 이미 통학 마일리지가 적립되었습니다. (1일 1회 중복 수급 제한)"
+        cursor.execute(
+            "INSERT INTO COMMUTE_LOGS (user_id, log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (g.user_id, 'BLOCK_DUPLICATE', origin_label, round(distance_km, 2), round(speed_kmh, 1), '중복적립 차단', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
+        )
+        conn.commit()
+        return jsonify({"status": "REJECTED", "badge": "중복적립 차단", "reason": reason})
 
     # 1. GPS 스푸핑(위치 변조) 차단
     if speed_kmh > 150.0:
@@ -122,11 +178,11 @@ def verify_commute():
     early_bonus = 200 if is_early_mode else 0
     distance_reward = int(round(distance_km * 50))
     total_reward = base_reward + early_bonus + distance_reward
-    reason = f"실제 거리 {round(distance_km, 2)}km 및 대중교통 결제 교차 검증 일치"
+    reason = f"본인 기기({reg_device_id}) · 실제 거리 {round(distance_km, 2)}km · 대중교통 결제 교차 검증 일치"
 
     cursor.execute(
-        "UPDATE USERS SET wallet_balance = wallet_balance + ?, total_distance = total_distance + ?, early_count = early_count + ? WHERE user_id = ?",
-        (total_reward, round(distance_km, 2), 1 if is_early_mode else 0, g.user_id)
+        "UPDATE USERS SET wallet_balance = wallet_balance + ?, total_distance = total_distance + ?, early_count = early_count + ?, last_earn_date = ? WHERE user_id = ?",
+        (total_reward, round(distance_km, 2), 1 if is_early_mode else 0, today_str, g.user_id)
     )
     cursor.execute("SELECT wallet_balance FROM USERS WHERE user_id = ?", (g.user_id,))
     new_balance = cursor.fetchone()[0]
@@ -146,6 +202,7 @@ def verify_commute():
         "distance_reward": distance_reward,
         "earned_points": total_reward,
         "new_balance": new_balance,
+        "last_earn_date": today_str,
         "reason": reason
     })
 
@@ -160,7 +217,6 @@ def exchange_coupon():
     cost = coupon["cost"]
 
     conn = get_db()
-    # 잔액 확인과 차감을 한 문장으로 처리해 동시 요청에도 잔액이 음수가 되지 않게 함
     updated = conn.execute(
         "UPDATE USERS SET wallet_balance = wallet_balance - ? WHERE user_id = ? AND wallet_balance >= ?",
         (cost, g.user_id, cost),
@@ -185,7 +241,7 @@ def exchange_coupon():
         "voucher_code": f"PTU-{random.randint(1000,9999)}-{random.randint(1000,9999)}"
     })
 
-# [API 6] 발표 리허설용 데이터 초기화 (7,500P 복구)
+# [API 6] 발표 리허설용 데이터 초기화 (7,500P 및 1일 1회 적립 제한 리셋)
 @app.route('/api/reset', methods=['POST'])
 @login_required
 def reset_wallet():
@@ -193,8 +249,10 @@ def reset_wallet():
         return jsonify({"status": "FAILED", "reason": "시연 데이터 초기화는 데모 계정에서만 가능합니다."}), 403
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("UPDATE USERS SET wallet_balance = ?, total_distance = ?, early_count = ? WHERE user_id = ?",
-                   (DEMO_INITIAL["wallet_balance"], DEMO_INITIAL["total_distance"], DEMO_INITIAL["early_count"], DEMO_USER_ID))
+    cursor.execute(
+        "UPDATE USERS SET wallet_balance = ?, total_distance = ?, early_count = ?, last_earn_date = '' WHERE user_id = ?",
+        (DEMO_INITIAL["wallet_balance"], DEMO_INITIAL["total_distance"], DEMO_INITIAL["early_count"], DEMO_USER_ID)
+    )
     cursor.execute("DELETE FROM COMMUTE_LOGS WHERE user_id = ?", (g.user_id,))
     conn.commit()
     return jsonify({"status": "RESET_COMPLETE", "new_balance": 7500})
@@ -227,7 +285,7 @@ def get_hourly_stats():
 @app.route('/api/stats/fraud', methods=['GET'])
 def get_fraud_stats():
     return jsonify({
-        "labels": ["정상 대중교통 승인", "1km 미만 도보 차단", "결제 미태그 차단", "GPS 스푸핑 조작 차단"],
+        "labels": ["정상 대중교통 승인", "1km 미만 도보 차단", "결제 미태그 차단", "대리출석·중복·스푸핑 차단"],
         "counts": [142, 34, 16, 8],
         "block_accuracy": 98.5
     })
@@ -308,6 +366,8 @@ def get_system_spec():
         "min_distance_km": 1.0,
         "min_speed_kmh": 5.0,
         "max_speed_kmh": 150.0,
+        "daily_limit": "1일 1회 적립 제한",
+        "device_binding": "UUID 단말기 고유 식별 대리출석 방지",
         "base_reward_p": 300,
         "early_bird_cutoff_hour": 8,
         "early_bird_bonus_p": 200,
