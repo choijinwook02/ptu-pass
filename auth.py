@@ -15,7 +15,7 @@ from functools import wraps
 from flask import Blueprint, jsonify, request, session, g
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from db import get_db, kst_now_str
+from db import get_db, kst_now_str, DEMO_USER_ID
 
 bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
@@ -130,6 +130,23 @@ def login():
 
     session.clear()               # 세션 고정 공격 방지: 로그인 시 세션 새로 발급
     session["user_id"] = student_id
+    return jsonify({"status": "SUCCESS", "user": _public_user(row)})
+
+
+def demo_login_enabled():
+    return os.environ.get("DEMO_LOGIN_ENABLED", "1") != "0"
+
+
+@bp.post("/demo")
+def demo_login():
+    """학술제 시연용 원클릭 로그인. 실서비스 배포 시 DEMO_LOGIN_ENABLED=0으로 끈다."""
+    if not demo_login_enabled():
+        return _err(403, "DEMO_DISABLED", "데모 로그인이 비활성화되어 있습니다.")
+    row = get_db().execute("SELECT * FROM USERS WHERE user_id = ?", (DEMO_USER_ID,)).fetchone()
+    if row is None:
+        return _err(404, "NO_DEMO", "데모 계정이 없습니다.")
+    session.clear()
+    session["user_id"] = DEMO_USER_ID
     return jsonify({"status": "SUCCESS", "user": _public_user(row)})
 
 

@@ -260,9 +260,121 @@
     @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes holoSheen { 0% { transform: translateX(-150%) rotate(25deg); } 100% { transform: translateX(150%) rotate(25deg); } }
+
+    /* ================= 로그인 / 회원가입 ================= */
+    .auth-screen {
+      position: fixed; inset: 0; z-index: 3000; display: flex; align-items: center; justify-content: center;
+      padding: 24px 16px; background: var(--bg); overflow-y: auto;
+    }
+    .auth-screen::before {
+      content: ''; position: fixed; top: -160px; left: 50%; transform: translateX(-50%);
+      width: 760px; height: 520px; background: radial-gradient(circle, rgba(59,130,246,0.22) 0%, rgba(14,165,233,0.08) 50%, transparent 80%);
+      filter: blur(80px); pointer-events: none;
+    }
+    .auth-screen.hidden { display: none; }
+    .auth-card {
+      position: relative; width: 100%; max-width: 400px; margin: auto; background: var(--card-bg);
+      border: 1px solid var(--card-border); border-radius: 22px; box-shadow: var(--card-shadow);
+      padding: 30px 24px 24px; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    }
+    .auth-brand { justify-content: center; font-size: 20px; cursor: default; }
+    .auth-sub { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 8px; }
+    .auth-tabs { display: flex; gap: 4px; background: rgba(125,125,125,0.08); border-radius: 12px; padding: 4px; margin: 22px 0 18px; }
+    .auth-tab {
+      flex: 1; border: none; background: transparent; padding: 10px; border-radius: 9px;
+      font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer;
+    }
+    .auth-tab.active { background: var(--primary-gradient); color: white; box-shadow: var(--glow); }
+    .auth-field { margin-bottom: 12px; }
+    .auth-field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; }
+    .auth-field label small { font-weight: 500; opacity: 0.8; }
+    .auth-field input {
+      width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--card-border);
+      background: rgba(125,125,125,0.04); color: var(--text-main); font-size: 15px; outline: none;
+    }
+    .auth-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+    .auth-screen[data-mode="login"] .signup-only { display: none; }
+    .auth-error {
+      display: none; margin: 4px 0 12px; padding: 10px 12px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.35); color: var(--danger);
+    }
+    .auth-error.show { display: block; }
+    .auth-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; color: var(--text-muted); font-size: 12px; }
+    .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--card-border); }
+    .cyber-btn:disabled { opacity: 0.6; cursor: wait; transform: none; }
+
+    .user-chip {
+      display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 11px; border-radius: 99px; font-size: 13px; font-weight: 700;
+      background: rgba(125,125,125,0.08); color: var(--text-main); white-space: nowrap; flex-shrink: 0;
+    }
+    .user-chip .js-user-name { max-width: 84px; overflow: hidden; text-overflow: ellipsis; }
+    .logout-btn {
+      width: 28px; height: 28px; border: none; border-radius: 50%; cursor: pointer; flex-shrink: 0;
+      background: transparent; color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 13px;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,0.12); color: var(--danger); }
+    .nav-item, .header-wallet { white-space: nowrap; }
+    .nav-item { padding: 8px 10px; }
+    /* 사용자 칩 공간 확보: 서버 상태는 점만 표시하고 문구는 툴팁으로 */
+    .server-pill { padding: 6px; }
+    .server-pill > span:not(.pulse-dot) { display: none; }
+    @media (max-width: 1100px) { .server-pill { display: none; } .nav-item { padding: 8px 8px; } }
+    /* 좁은 화면: 이름은 숨기고 로그아웃 버튼만 (이름은 지갑 카드에 표시됨) */
+    @media (max-width: 1100px) {
+      .user-chip { padding: 4px; }
+      .user-chip .js-user-name, .user-chip > .fa-circle-user { display: none; }
+    }
+    @media (max-width: 768px) {
+      .nav-right { gap: 6px; }
+      .logo { font-size: 16px; gap: 8px; }
+      .header-wallet { padding: 6px 10px; }
+      .logout-btn { width: 26px; height: 26px; }
+    }
   </style>
 </head>
 <body>
+  <!-- 로그인 / 회원가입 화면 (로그인 전에는 대시보드를 덮음) -->
+  <div id="authScreen" class="auth-screen" data-mode="login">
+    <div class="auth-card">
+      <div class="logo auth-brand">
+        <div class="logo-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+        <span>PTU Commute Pass</span>
+      </div>
+      <p class="auth-sub">대중교통으로 일찍 등교하고 교내 마일리지를 받으세요</p>
+
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab active" id="authTabLogin" onclick="switchAuthTab('login')">로그인</button>
+        <button type="button" class="auth-tab" id="authTabSignup" onclick="switchAuthTab('signup')">회원가입</button>
+      </div>
+
+      <form id="authForm" onsubmit="submitAuth(event)" novalidate>
+        <div class="auth-field">
+          <label for="authStudentId">학번</label>
+          <input id="authStudentId" inputmode="numeric" autocomplete="username" maxlength="10" placeholder="10자리 학번">
+        </div>
+        <div class="auth-field signup-only">
+          <label for="authName">이름</label>
+          <input id="authName" autocomplete="name" placeholder="홍길동">
+        </div>
+        <div class="auth-field signup-only">
+          <label for="authDept">학과 <small>(선택)</small></label>
+          <input id="authDept" placeholder="정보통신학과">
+        </div>
+        <div class="auth-field">
+          <label for="authPassword">비밀번호</label>
+          <input id="authPassword" type="password" autocomplete="current-password" placeholder="8자 이상">
+        </div>
+        <div id="authError" class="auth-error" role="alert"></div>
+        <button type="submit" id="authSubmit" class="cyber-btn btn-verify" style="margin-bottom: 0;">로그인</button>
+      </form>
+
+      <div class="auth-divider">또는</div>
+      <button type="button" class="cyber-btn btn-transit" style="margin-bottom: 0;" onclick="demoLogin()">
+        <i class="fa-solid fa-play"></i> 시연용 데모 계정으로 시작
+      </button>
+    </div>
+  </div>
+
 
   <!-- 실시간 토스트 알림 컨테이너 -->
   <div id="toastContainer"></div>
@@ -284,13 +396,20 @@
       </ul>
 
       <div class="nav-right">
-        <div class="server-pill" title="15개 백엔드 REST API 정상 가동 중">
+        <div class="server-pill" title="시연 자료 팀 · 15개 백엔드 REST API 정상 가동 중">
           <span class="pulse-dot"></span>
-          <span>시연 자료 팀 · API 온라인</span>
+          <span>API 온라인</span>
+        </div>
+        <div class="user-chip" title="로그인한 사용자">
+          <i class="fa-solid fa-circle-user" style="color: var(--primary);"></i>
+          <span class="js-user-name">-</span>
+          <button class="logout-btn" onclick="logout()" title="로그아웃" aria-label="로그아웃">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
         </div>
         <div class="header-wallet" onclick="switchTab('wallet')">
           <i class="fa-solid fa-coins" style="color: #f59e0b;"></i>
-          <span id="navBalance">7,500 P</span>
+          <span id="navBalance">0 P</span>
         </div>
         <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()" title="다크/라이트 모드 전환">
           <i class="fa-solid fa-moon"></i>
@@ -366,9 +485,9 @@
           </div>
           <div class="wallet-card-holo">
             <div style="font-size: 12px; opacity: 0.85; margin-bottom: 4px;">사용 가능 잔액</div>
-            <div class="wallet-val"><span id="mainBalance">7,500</span><span>P</span></div>
+            <div class="wallet-val"><span id="mainBalance">0</span><span>P</span></div>
             <div style="font-size: 12px; margin-top: 12px; opacity: 0.9; display: flex; justify-content: space-between;">
-              <span id="teamNameDisplay">시연 자료 팀</span>
+              <span id="teamNameDisplay" class="js-user-name">-</span>
               <span>1P = 1원 교내 현금성 사용</span>
             </div>
           </div>
@@ -433,7 +552,7 @@
       <div class="card">
         <div class="card-title">
           <span>최근 통학 교차 검증 심사 원장</span>
-          <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;">시연 자료 팀 · 실시간 알고리즘 판정 로그</span>
+          <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;"><span class="js-user-name">-</span> · 실시간 알고리즘 판정 로그</span>
         </div>
         <div class="table-responsive">
           <table>
@@ -448,23 +567,7 @@
               </tr>
             </thead>
             <tbody id="historyTbody">
-              <tr>
-                <td>2026-10-30 (07:38)</td>
-                <td>수원 영통역 · 광역버스</td>
-                <td>28.4 km (44km/h)</td>
-                <td><span class="tag tag-success">정상 승인</span></td>
-                <td>결제 트랜잭션 일치 및 08시 이전 조기 도착 가중치 반영</td>
-                <td style="font-weight: 800; color: var(--success);">+1,920 P</td>
-              </tr>
-              <tr>
-                <td>2026-10-29 (08:15)</td>
-                <td>평택대 제3기숙사 · 도보</td>
-                <td>0.35 km (3.8km/h)</td>
-                <td><span class="tag tag-danger">지급 거부</span></td>
-                <td>1km 미만 단거리 도보 통학 레드존 및 결제 부재로 오용 차단</td>
-                <td style="font-weight: 800; color: var(--text-muted);">0 P</td>
-              </tr>
-            </tbody>
+              </tbody>
           </table>
         </div>
       </div>
@@ -545,15 +648,15 @@
       <div class="card">
         <div class="card-title"><span>전자지갑 상세 관리 및 모바일 바코드</span><i class="fa-solid fa-credit-card" style="color: var(--primary);"></i></div>
         <div class="wallet-card-holo">
-          <div style="font-size: 13px; opacity: 0.85;">시연 자료 팀 · 총 보유 마일리지</div>
-          <div class="wallet-val"><span id="subBalance">7,500</span><span>P</span></div>
+          <div style="font-size: 13px; opacity: 0.85;"><span class="js-user-name">-</span> · 총 보유 마일리지</div>
+          <div class="wallet-val"><span id="subBalance">0</span><span>P</span></div>
           <div style="font-size: 12px; margin-top: 10px; opacity: 0.9;">연동 계좌/카드: KB국민 K-패스 체크 (정상 연동 중)</div>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           <button class="cyber-btn btn-gps" style="flex: 1; margin-bottom:0;" onclick="openBarcodeModal('교내 통합 마일리지 현장 결제 바코드', '보유 잔액 한도 내 즉시 차감')">
             <i class="fa-solid fa-qrcode"></i> 현장 결제 바코드 띄우기
           </button>
-          <button class="cyber-btn btn-transit" style="flex: 1; margin-bottom:0;" onclick="resetDemoData()">
+          <button id="resetDemoBtn" class="cyber-btn btn-transit" style="flex: 1; margin-bottom:0;" onclick="resetDemoData()">
             <i class="fa-solid fa-rotate-left"></i> 시연 데이터 초기화 (7,500P 리셋)
           </button>
         </div>
@@ -570,21 +673,7 @@
               <tr><th>일시</th><th>구분</th><th>상세 항목</th><th>변동 마일리지</th><th>비고</th></tr>
             </thead>
             <tbody id="walletLedgerBody">
-              <tr>
-                <td>2026-10-30</td>
-                <td><span class="tag tag-success">적립</span></td>
-                <td>조기 통학 교차 검증 통과 (광역버스 28.4km)</td>
-                <td style="font-weight: 800; color: var(--success);">+1,920 P</td>
-                <td>오프피크 보너스 포함</td>
-              </tr>
-              <tr>
-                <td>2026-10-29</td>
-                <td><span class="tag tag-danger">사용</span></td>
-                <td>교내 카페 3,000원 음료 교환권 발급</td>
-                <td style="font-weight: 800; color: var(--danger);">-3,000 P</td>
-                <td>바코드 사용 완료</td>
-              </tr>
-            </tbody>
+              </tbody>
           </table>
         </div>
       </div>
@@ -606,7 +695,7 @@
             <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">교내 카페 3,000원 음료 교환권</div>
             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">교내 카페 3,000원 이상 음료 결제 시 즉시 사용</div>
             <div style="font-size: 18px; color: var(--primary); font-weight: 900; margin-bottom: 16px;">3,000 P 차감</div>
-            <button class="btn-exchange" onclick="exchangeCoupon('교내 카페 3,000원 음료 교환권', 3000)">모바일 교환권 발급</button>
+            <button class="btn-exchange" onclick="exchangeCoupon('CAFE_3000', '교내 카페 3,000원 음료 교환권', 3000)">모바일 교환권 발급</button>
           </div>
 
           <div class="shop-card">
@@ -614,7 +703,7 @@
             <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">학생식당 1식 식권 교환권</div>
             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">평택대학교 학생식당 중식/석식 단품 (6,500원)</div>
             <div style="font-size: 18px; color: var(--primary); font-weight: 900; margin-bottom: 16px;">6,500 P 차감</div>
-            <button class="btn-exchange" onclick="exchangeCoupon('학생식당 1식 식권 (6,500원)', 6500)">모바일 식권 발급</button>
+            <button class="btn-exchange" onclick="exchangeCoupon('MEAL_6500', '학생식당 1식 식권 (6,500원)', 6500)">모바일 식권 발급</button>
           </div>
 
           <div class="shop-card">
@@ -622,7 +711,7 @@
             <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">학술정보관 인쇄·출력 50장권</div>
             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">교내 도서관 및 전산실 A4 흑백 출력 쿠폰</div>
             <div style="font-size: 18px; color: var(--primary); font-weight: 900; margin-bottom: 16px;">1,500 P 차감</div>
-            <button class="btn-exchange" onclick="exchangeCoupon('학술정보관 출력 50장권', 1500)">모바일 쿠폰 발급</button>
+            <button class="btn-exchange" onclick="exchangeCoupon('PRINT_1500', '학술정보관 출력 50장권', 1500)">모바일 쿠폰 발급</button>
           </div>
         </div>
       </div>
@@ -676,7 +765,12 @@
     const PTU_LAT = 36.9961;
     const PTU_LON = 127.1328;
 
-    let currentBalance = 7500;
+    let currentBalance = 0;
+    // 로그인 상태 (아래 로그인/세션 섹션에서 사용)
+    const AUTH_ERR = 'AuthRequired';
+    const DEMO_ID = 'DEMO_TEAM';
+    let currentUser = null;
+    let authMode = 'login';
     let myCurrentLat = null;
     let myCurrentLon = null;
     let calculatedDistKm = null;
@@ -701,7 +795,7 @@
 
     async function syncWalletFromServer() {
       try {
-        const res = await fetch('/api/wallet');
+        const res = await apiFetch('/api/wallet');
         if (res.ok) {
           const data = await res.json();
           if (data.balance !== undefined) {
@@ -716,7 +810,7 @@
         }
       } catch (e) {}
     }
-    syncWalletFromServer();
+    bootAuth();
 
     function toggleTheme() {
       const html = document.documentElement;
@@ -929,9 +1023,10 @@
       let baseReward = 300;
       let earlyBonus = isEarly ? 200 : 0;
       let distReward = Math.round(calculatedDistKm * 50);
+      let fromServer = false;
 
       try {
-        const res = await fetch('/api/verify', {
+        const res = await apiFetch('/api/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -947,6 +1042,7 @@
         });
         if (res.ok) {
           const serverData = await res.json();
+          fromServer = true;
           if (serverData.status === 'APPROVED') {
             isSuccess = true;
             earnedPoints = serverData.earned_points;
@@ -961,6 +1057,7 @@
           throw new Error("Fallback");
         }
       } catch (err) {
+        if (err.name === AUTH_ERR) return;   // 로그인 만료 → 로그인 화면이 이미 열림
         if (simulatedSpeedKmh > 150) {
           isSuccess = false;
           statusBadge = '<span class="tag tag-danger">스푸핑 차단</span>';
@@ -1004,7 +1101,7 @@
         animateBalance(prevBal, currentBalance);
         syncWalletFromServer();
 
-        ledgerBody.insertAdjacentHTML('afterbegin', `
+        if (!fromServer) ledgerBody.insertAdjacentHTML('afterbegin', `
           <tr>
             <td>${dateStr} (${timeStr})</td>
             <td><span class="tag tag-success">적립</span></td>
@@ -1025,7 +1122,8 @@
         `;
       }
 
-      tbody.insertAdjacentHTML('afterbegin', `
+      if (fromServer) loadLogs();
+      else tbody.insertAdjacentHTML('afterbegin', `
         <tr style="background: ${isSuccess ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)'};">
           <td>${dateStr} (${timeStr})</td>
           <td>${currentOriginLabel}</td>
@@ -1149,58 +1247,219 @@
       document.getElementById('barcodeModal').classList.remove('show');
     }
 
-    async function exchangeCoupon(name, cost) {
+    async function exchangeCoupon(couponId, name, cost) {
       if (currentBalance < cost) {
         alert(`마일리지가 부족합니다!\n필요 포인트: ${cost.toLocaleString()} P\n현재 잔액: ${currentBalance.toLocaleString()} P`);
         return;
       }
-      if (confirm(`[${name}]을(를) ${cost.toLocaleString()} P로 발급하시겠습니까?`)) {
-        let voucherCode = null;
-        try {
-          const res = await fetch('/api/exchange', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ item_name: name, cost: cost })
-          });
-          if (res.ok) {
-            const d = await res.json();
-            voucherCode = d.voucher_code;
-          }
-        } catch (e) {}
+      if (!confirm(`[${name}]을(를) ${cost.toLocaleString()} P로 발급하시겠습니까?`)) return;
 
-        const prevBal = currentBalance;
-        currentBalance -= cost;
-        animateBalance(prevBal, currentBalance);
-        syncWalletFromServer();
-        fireConfetti();
-        showToast(`${name} 발급 완료 (-${cost.toLocaleString()} P)`);
-
-        const dateStr = new Date().toISOString().split('T')[0];
-        document.getElementById('walletLedgerBody').insertAdjacentHTML('afterbegin', `
-          <tr>
-            <td>${dateStr} (방금)</td>
-            <td><span class="tag tag-danger">사용</span></td>
-            <td>${name} 발급</td>
-            <td style="font-weight: 800; color: var(--danger);">-${cost.toLocaleString()} P</td>
-            <td>모바일 바코드 발급 완료</td>
-          </tr>
-        `);
-
-        openBarcodeModal(name, `차감 완료 (-${cost.toLocaleString()} P) | 남은 잔액: ${currentBalance.toLocaleString()} P`, voucherCode);
+      let d;
+      try {
+        const res = await apiFetch('/api/exchange', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coupon_id: couponId })   // 가격은 서버 카탈로그 기준
+        });
+        d = await res.json();
+        if (!res.ok) {
+          showToast(d.reason || '쿠폰 발급에 실패했습니다.');
+          syncWalletFromServer();
+          return;
+        }
+      } catch (e) {
+        if (e.name !== AUTH_ERR) showToast('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+        return;
       }
+
+      const prevBal = currentBalance;
+      currentBalance = d.new_balance;
+      animateBalance(prevBal, currentBalance);
+      fireConfetti();
+      showToast(`${d.item_name} 발급 완료 (-${d.deducted_points.toLocaleString()} P)`);
+      loadLogs();
+      openBarcodeModal(d.item_name, `차감 완료 (-${d.deducted_points.toLocaleString()} P) | 남은 잔액: ${currentBalance.toLocaleString()} P`, d.voucher_code);
     }
 
     async function resetDemoData() {
-      if (confirm("시연 데이터를 초기 상태(보유 잔액 7,500 P)로 리셋하시겠습니까?")) {
-        try {
-          await fetch('/api/reset', { method: 'POST' });
-        } catch (e) {}
+      if (!confirm("시연 데이터를 초기 상태(보유 잔액 7,500 P)로 리셋하시겠습니까?")) return;
+      try {
+        const res = await apiFetch('/api/reset', { method: 'POST' });
+        const d = await res.json();
+        if (!res.ok) { showToast(d.reason || '초기화에 실패했습니다.'); return; }
         const prevBal = currentBalance;
-        currentBalance = 7500;
-        animateBalance(prevBal, 7500);
+        currentBalance = d.new_balance;
+        animateBalance(prevBal, currentBalance);
         syncWalletFromServer();
+        loadLogs();
         showToast("시연 데이터가 7,500 P로 초기화되었습니다.");
+      } catch (e) {
+        if (e.name !== AUTH_ERR) showToast('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
       }
+    }
+
+    // ================= 로그인 / 세션 =================
+
+    // 로그인이 필요한 API 호출용. 401이면 로그인 화면을 띄우고 AUTH_ERR를 던짐
+    async function apiFetch(url, options = {}) {
+      const res = await fetch(url, { credentials: 'same-origin', ...options });
+      if (res.status === 401) {
+        showAuthScreen('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+        const err = new Error('로그인 필요');
+        err.name = AUTH_ERR;
+        throw err;
+      }
+      return res;
+    }
+
+    function escapeHtml(v) {
+      return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function showAuthScreen(message) {
+      currentUser = null;
+      document.getElementById('authScreen').classList.remove('hidden');
+      setAuthError(message || '');
+      document.getElementById('authPassword').value = '';
+    }
+
+    function setAuthError(message) {
+      const box = document.getElementById('authError');
+      box.textContent = message;
+      box.classList.toggle('show', !!message);
+    }
+
+    function switchAuthTab(mode) {
+      authMode = mode;
+      document.getElementById('authScreen').dataset.mode = mode;
+      document.getElementById('authTabLogin').classList.toggle('active', mode === 'login');
+      document.getElementById('authTabSignup').classList.toggle('active', mode === 'signup');
+      document.getElementById('authSubmit').textContent = mode === 'login' ? '로그인' : '가입하고 시작하기';
+      document.getElementById('authPassword').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+      setAuthError('');
+    }
+
+    async function postAuth(url, body) {
+      const res = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.reason || '요청을 처리하지 못했습니다.');
+      return data;
+    }
+
+    async function submitAuth(event) {
+      event.preventDefault();
+      const studentId = document.getElementById('authStudentId').value.trim();
+      const password = document.getElementById('authPassword').value;
+
+      if (!/^\d{10}$/.test(studentId)) return setAuthError('학번은 10자리 숫자로 입력해 주세요.');
+      if (authMode === 'signup') {
+        if (!document.getElementById('authName').value.trim()) return setAuthError('이름을 입력해 주세요.');
+        if (password.length < 8) return setAuthError('비밀번호는 8자 이상이어야 합니다.');
+      } else if (!password) {
+        return setAuthError('비밀번호를 입력해 주세요.');
+      }
+
+      const btn = document.getElementById('authSubmit');
+      btn.disabled = true;
+      try {
+        const data = authMode === 'login'
+          ? await postAuth('/api/auth/login', { student_id: studentId, password })
+          : await postAuth('/api/auth/signup', {
+              student_id: studentId, password,
+              name: document.getElementById('authName').value.trim(),
+              dept: document.getElementById('authDept').value.trim()
+            });
+        onLoggedIn(data.user, authMode === 'signup');
+      } catch (e) {
+        setAuthError(e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function demoLogin() {
+      try {
+        const data = await postAuth('/api/auth/demo');
+        onLoggedIn(data.user);
+      } catch (e) {
+        setAuthError(e.message);
+      }
+    }
+
+    async function logout() {
+      try { await postAuth('/api/auth/logout'); } catch (e) {}
+      document.getElementById('historyTbody').innerHTML = '';
+      document.getElementById('walletLedgerBody').innerHTML = '';
+      currentBalance = 0;
+      ['mainBalance', 'subBalance'].forEach(id => document.getElementById(id).innerText = '0');
+      document.getElementById('navBalance').innerText = '0 P';
+      switchAuthTab('login');
+      showAuthScreen('');
+    }
+
+    function onLoggedIn(user, isNew) {
+      currentUser = user;
+      document.querySelectorAll('.js-user-name').forEach(el => el.textContent = user.name);
+      document.getElementById('resetDemoBtn').style.display = user.student_id === DEMO_ID ? '' : 'none';
+      document.getElementById('authScreen').classList.add('hidden');
+      document.getElementById('authForm').reset();
+      setAuthError('');
+      syncWalletFromServer();
+      loadLogs();
+      if (isNew) showToast(`${user.name}님, 가입을 환영합니다!`);
+    }
+
+    async function bootAuth() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (res.ok) return onLoggedIn((await res.json()).user);
+      } catch (e) {}
+      showAuthScreen('');
+    }
+
+    // 서버에 저장된 본인 로그로 심사 원장/입출금 원장을 다시 그림
+    async function loadLogs() {
+      let logs;
+      try {
+        const res = await apiFetch('/api/logs');
+        if (!res.ok) return;
+        logs = (await res.json()).logs;
+      } catch (e) { return; }
+
+      const emptyRow = (cols, text) =>
+        `<tr><td colspan="${cols}" style="text-align: center; color: var(--text-muted); padding: 24px;">${text}</td></tr>`;
+
+      const verifyLogs = logs.filter(l => l.log_type !== 'SPEND');
+      document.getElementById('historyTbody').innerHTML = verifyLogs.length ? verifyLogs.map(l => {
+        const ok = l.log_type === 'EARN';
+        return `
+          <tr style="background: ${ok ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)'};">
+            <td>${escapeHtml(l.created_at)}</td>
+            <td>${escapeHtml(l.origin_label)}</td>
+            <td>${escapeHtml(l.distance_km)} km (${escapeHtml(l.speed_kmh)}km/h)</td>
+            <td><span class="tag ${ok ? 'tag-success' : 'tag-danger'}">${escapeHtml(l.status)}</span></td>
+            <td>${escapeHtml(l.description)}</td>
+            <td style="font-weight: 800; color: ${ok ? 'var(--success)' : 'var(--text-muted)'};">${ok ? '+' + l.points.toLocaleString() : '0'} P</td>
+          </tr>`;
+      }).join('') : emptyRow(6, '아직 통학 인증 기록이 없습니다. 위에서 첫 인증을 해보세요.');
+
+      const moneyLogs = logs.filter(l => l.log_type === 'EARN' || l.log_type === 'SPEND');
+      document.getElementById('walletLedgerBody').innerHTML = moneyLogs.length ? moneyLogs.map(l => {
+        const earn = l.log_type === 'EARN';
+        return `
+          <tr>
+            <td>${escapeHtml(l.created_at)}</td>
+            <td><span class="tag ${earn ? 'tag-success' : 'tag-danger'}">${earn ? '적립' : '사용'}</span></td>
+            <td>${earn ? `통학 교차 검증 적립 (${escapeHtml(l.origin_label)}, ${escapeHtml(l.distance_km)}km)` : escapeHtml(l.description)}</td>
+            <td style="font-weight: 800; color: ${earn ? 'var(--success)' : 'var(--danger)'};">${earn ? '+' : ''}${l.points.toLocaleString()} P</td>
+            <td>${earn ? '교차 검증 통과' : '모바일 바코드 발급'}</td>
+          </tr>`;
+      }).join('') : emptyRow(5, '아직 마일리지 입출금 내역이 없습니다.');
     }
 
     setInterval(() => {
