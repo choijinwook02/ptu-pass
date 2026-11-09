@@ -101,7 +101,7 @@
     }
     .theme-toggle:hover { transform: rotate(20deg) scale(1.08); }
 
-    /* 스마트폰 전용 하단 앱 네비게이션 (5개 탭) */
+    /* 스마트폰 전용 하단 앱 네비게이션 (6개 탭) */
     .mobile-bottom-nav {
       display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
       background: var(--nav-bg); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
@@ -149,9 +149,10 @@
 
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
 
     @media (max-width: 768px) {
-      .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 14px; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; gap: 14px; }
       .nav-links, .server-pill { display: none; }
       .mobile-bottom-nav { display: block; }
       #map { height: 260px; }
@@ -275,6 +276,18 @@
       margin-bottom: 8px;
     }
 
+    /* 운영자 대시보드 폼 입력 스타일 */
+    .admin-input {
+      width: 90px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--card-border);
+      background: var(--card-bg); color: var(--text-main); font-size: 13px; font-weight: 800; text-align: right;
+    }
+    .admin-action-btn {
+      font-size: 11px; font-weight: 800; padding: 5px 9px; border-radius: 7px;
+      border: 1px solid var(--card-border); background: var(--card-bg); color: var(--text-main);
+      cursor: pointer; margin-right: 4px; margin-bottom: 4px;
+    }
+    .admin-action-btn:hover { border-color: var(--primary); color: var(--primary); }
+
     /* 우측 상단 실시간 토스트 알림 */
     #toastContainer { position: fixed; top: 75px; right: 20px; z-index: 2500; display: flex; flex-direction: column; gap: 8px; }
     .toast-msg {
@@ -374,7 +387,7 @@
       <form id="authForm" onsubmit="submitAuth(event)" novalidate>
         <div class="auth-field">
           <label for="authStudentId">학번</label>
-          <input id="authStudentId" inputmode="numeric" autocomplete="username" maxlength="10" placeholder="10자리 학번">
+          <input id="authStudentId" inputmode="numeric" autocomplete="username" maxlength="10" placeholder="10자리 학번 (예: 2021143024)">
         </div>
         <div class="auth-field signup-only">
           <label for="authName">이름</label>
@@ -386,7 +399,7 @@
         </div>
         <div class="auth-field">
           <label for="authPassword">비밀번호</label>
-          <input id="authPassword" type="password" autocomplete="current-password" placeholder="8자 이상">
+          <input id="authPassword" type="password" autocomplete="current-password" placeholder="8자 이상 (기본: 12345678)">
         </div>
         <div id="authError" class="auth-error" role="alert"></div>
         <button type="submit" id="authSubmit" class="cyber-btn btn-verify" style="margin-bottom: 0;">로그인</button>
@@ -416,10 +429,11 @@
         <li class="nav-item" onclick="switchTab('wallet')"><i class="fa-solid fa-wallet"></i> 마일리지 지갑</li>
         <li class="nav-item" onclick="switchTab('shop')"><i class="fa-solid fa-store"></i> 교내 사용처</li>
         <li class="nav-item" onclick="switchTab('guide')"><i class="fa-solid fa-circle-info"></i> 이용 안내</li>
+        <li class="nav-item" onclick="switchTab('admin')"><i class="fa-solid fa-user-shield"></i> 운영자 관제</li>
       </ul>
 
       <div class="nav-right">
-        <div class="server-pill" title="시연 자료 팀 · 5중 보안 및 15개 백엔드 REST API 정상 가동 중">
+        <div class="server-pill" title="시연 자료 팀 · 5중 보안 및 19개 백엔드 REST API 정상 가동 중">
           <span class="pulse-dot"></span>
           <span>API 온라인</span>
         </div>
@@ -441,7 +455,7 @@
     </div>
   </header>
 
-  <!-- 스마트폰 전용 하단 고정 탭 바 (5개 메뉴) -->
+  <!-- 스마트폰 전용 하단 고정 탭 바 (6개 메뉴) -->
   <nav class="mobile-bottom-nav">
     <ul class="mobile-nav-list">
       <li class="m-nav-item active" onclick="switchTab('commute')">
@@ -463,6 +477,10 @@
       <li class="m-nav-item" onclick="switchTab('guide')">
         <i class="fa-solid fa-circle-question"></i>
         <span>이용안내</span>
+      </li>
+      <li class="m-nav-item" onclick="switchTab('admin')">
+        <i class="fa-solid fa-user-shield"></i>
+        <span>운영자관제</span>
       </li>
     </ul>
   </nav>
@@ -802,6 +820,147 @@
       </div>
     </div>
 
+    <!-- ================= 6. [신설] 운영자 통합 관제 대시보드 탭 ================= -->
+    <div id="tab-admin" class="tab-content">
+      <!-- 상단 관제 KPI 4종 -->
+      <div class="grid-4">
+        <div class="card" style="margin-bottom:0; text-align:center; padding:18px;">
+          <div style="font-size: 12px; color: var(--text-muted); font-weight: 700;">전체 등록 학생 계정</div>
+          <div style="font-size: 26px; font-weight: 900; color: var(--primary); margin: 4px 0;" id="admTotalUsers">0명</div>
+          <div style="font-size: 11px; color: var(--text-muted);">DB 실시간 등록 학우</div>
+        </div>
+        <div class="card" style="margin-bottom:0; text-align:center; padding:18px;">
+          <div style="font-size: 12px; color: var(--text-muted); font-weight: 700;">누적 정상 통학 승인</div>
+          <div style="font-size: 26px; font-weight: 900; color: var(--success); margin: 4px 0;" id="admEarnCount">0건</div>
+          <div style="font-size: 11px; color: var(--success); font-weight: 700;">5중 보안 교차 검증 통과</div>
+        </div>
+        <div class="card" style="margin-bottom:0; text-align:center; padding:18px;">
+          <div style="font-size: 12px; color: var(--text-muted); font-weight: 700;">부정 수급(어뷰징) 실시간 차단</div>
+          <div style="font-size: 26px; font-weight: 900; color: var(--danger); margin: 4px 0;" id="admBlockCount">0건</div>
+          <div style="font-size: 11px; color: var(--danger); font-weight: 700;">도보·대리출석·중복·스푸핑</div>
+        </div>
+        <div class="card" style="margin-bottom:0; text-align:center; padding:18px;">
+          <div style="font-size: 12px; color: var(--text-muted); font-weight: 700;">총 유통 마일리지 (예산 현황)</div>
+          <div style="font-size: 26px; font-weight: 900; color: var(--warning); margin: 4px 0;" id="admTotalPoints">0 P</div>
+          <div style="font-size: 11px; color: var(--text-muted);" id="admSpentSub">누적 쿠폰 교환: 0 P</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- 교차 검증 정책 파라미터 실시간 제어기 -->
+        <div class="card">
+          <div class="card-title">
+            <span><i class="fa-solid fa-sliders" style="color: var(--primary); margin-right: 6px;"></i> 5중 보안 교차 검증 & 보상 정책 실시간 제어</span>
+            <button class="preset-btn" onclick="loadAdminDashboard()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+          </div>
+          <div class="hud-panel">
+            <div class="hud-row">
+              <span class="hud-label">1. 도보 통학 차단 레드존 반경 (km):</span>
+              <input id="polMinDist" type="number" step="0.1" class="admin-input" value="1.0">
+            </div>
+            <div class="hud-row">
+              <span class="hud-label">2. GPS 스푸핑 차단 상한 속도 (km/h):</span>
+              <input id="polMaxSpd" type="number" step="5" class="admin-input" value="150">
+            </div>
+            <div class="hud-row">
+              <span class="hud-label">3. 기본 대중교통 통학 보상 (P):</span>
+              <input id="polBaseReward" type="number" step="50" class="admin-input" value="300">
+            </div>
+            <div class="hud-row">
+              <span class="hud-label">4. 08시 이전 조기 등교(오프피크) 보너스 (P):</span>
+              <input id="polEarlyBonus" type="number" step="50" class="admin-input" value="200">
+            </div>
+            <div class="hud-row">
+              <span class="hud-label">5. 거리 비례 가중치 단가 (P/km):</span>
+              <input id="polDistRate" type="number" step="10" class="admin-input" value="50">
+            </div>
+          </div>
+          <button class="cyber-btn btn-verify" style="margin-bottom: 0;" onclick="saveAdminPolicy()">
+            <i class="fa-solid fa-floppy-disk"></i> 정책 파라미터 서버 즉시 반영 (/api/admin/policy)
+          </button>
+        </div>
+
+        <!-- 운영자 빠른 시뮬레이션 및 시스템 상태 -->
+        <div class="card">
+          <div class="card-title">
+            <span><i class="fa-solid fa-server" style="color: var(--success); margin-right: 6px;"></i> 서버 아키텍처 & 세션 영속성(Auto-Restore) 상태</span>
+            <span class="tag tag-success">정상 가동 중</span>
+          </div>
+          <div class="hud-panel">
+            <div class="hud-row">
+              <span class="hud-label">백엔드 엔진 버전:</span>
+              <span class="hud-val">Flask v2.7-TDM-Admin-Suite</span>
+            </div>
+            <div class="hud-row">
+              <span class="hud-label">컨테이너 절전(Sleep) 자동 복구:</span>
+              <span class="hud-val" style="color: var(--success);">활성화됨 (LocalStorage ↔ SQLite 동기화)</span>
+            </div>
+            <div class="hud-row">
+              <span class="hud-label">동시성 제어 (Race Condition 방지):</span>
+              <span class="hud-val">원자적 UPDATE 쿼리 적용 완료</span>
+            </div>
+            <div class="hud-row">
+              <span class="hud-label">단말기 대리출석 바인딩 정책:</span>
+              <span class="hud-val">학번 1:1 UUID 매핑 강제 중</span>
+            </div>
+          </div>
+          <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.6;">
+            💡 <b>운영자 팁:</b> 학생이 휴대폰을 교체하여 대리출석 차단(UUID 불일치)이 발생한 경우, 아래 회원 관리 테이블에서 <b>[기기 초기화]</b> 버튼을 누르면 새 휴대폰이 즉시 등록됩니다.
+          </div>
+        </div>
+      </div>
+
+      <!-- 가입 회원 통합 관리 및 제어 테이블 -->
+      <div class="card">
+        <div class="card-title">
+          <span><i class="fa-solid fa-users-gear" style="color: var(--primary); margin-right: 6px;"></i> 등록 학생 계정 통합 관리 및 기기(UUID)·포인트 제어</span>
+          <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;">기기 변경 승인 · 1일 제한 해제 · 수동 포상 지급</span>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>학번 (ID)</th>
+                <th>이름 / 학과</th>
+                <th>보유 잔액</th>
+                <th>누적 거리</th>
+                <th>귀속 단말기 (UUID)</th>
+                <th>최근 적립일</th>
+                <th>운영자 즉시 제어</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsersTbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 전체 사용자 실시간 통합 감사 로그 (Audit Log) -->
+      <div class="card">
+        <div class="card-title">
+          <span><i class="fa-solid fa-clipboard-list" style="color: var(--danger); margin-right: 6px;"></i> 전체 학우 실시간 통합 감사 원장 (Security Audit Log)</span>
+          <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;">전교생 실시간 인증·차단·쿠폰교환 통합 모니터링</span>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>일시</th>
+                <th>학번 / 이름</th>
+                <th>출발지 / 구분</th>
+                <th>거리·속도</th>
+                <th>판정 상태</th>
+                <th>상세 사유</th>
+                <th>포인트</th>
+              </tr>
+            </thead>
+            <tbody id="adminLogsTbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- 모바일 쿠폰 / 바코드 모달 창 -->
@@ -843,6 +1002,31 @@
     }
     let activeDeviceUuid = myDeviceUuid;
     let hasEarnedTodayLocal = false;
+
+    // 서버가 잠들었을 때(Sleep) 자동 복구하기 위한 브라우저 계정 백업 헬퍼
+    function saveAccountBackup(studentId, password, name, dept, balance, totalDist) {
+      try {
+        const map = JSON.parse(localStorage.getItem('ptu_accounts_backup') || '{}');
+        const prev = map[studentId] || {};
+        map[studentId] = {
+          student_id: studentId,
+          password: password || prev.password || '12345678',
+          name: name || prev.name || '학우',
+          dept: dept || prev.dept || '정보통신학과',
+          balance: balance !== undefined ? balance : (prev.balance || 0),
+          total_distance: totalDist !== undefined ? totalDist : (prev.total_distance || 0)
+        };
+        localStorage.setItem('ptu_accounts_backup', JSON.stringify(map));
+        localStorage.setItem('ptu_last_student_id', studentId);
+      } catch (e) {}
+    }
+
+    function getAccountBackup(studentId) {
+      try {
+        const map = JSON.parse(localStorage.getItem('ptu_accounts_backup') || '{}');
+        return map[studentId] || null;
+      } catch (e) { return null; }
+    }
 
     function updateDeviceHudDisplay() {
       const badge = document.getElementById('deviceUuidBadge');
@@ -941,6 +1125,9 @@
           }
           if (data.total_distance !== undefined) {
             document.getElementById('benefitSummaryText').innerText = `${data.total_distance} km / ${currentBalance.toLocaleString()}원 상당 환급`;
+          }
+          if (currentUser && currentUser.student_id && currentUser.student_id !== DEMO_ID) {
+            saveAccountBackup(currentUser.student_id, null, data.name, data.dept, currentBalance, data.total_distance);
           }
           const todayStr = new Date().toISOString().split('T')[0];
           updateDailyLimitHud(data.last_earn_date === todayStr);
@@ -1207,6 +1394,9 @@
           if (serverData.status === 'APPROVED') {
             isSuccess = true;
             earnedPoints = serverData.earned_points;
+            baseReward = serverData.base_reward;
+            earlyBonus = serverData.early_bonus;
+            distReward = serverData.distance_reward;
             reasonText = serverData.reason;
             statusBadge = '<span class="tag tag-success">정상 승인</span>';
             updateDailyLimitHud(true);
@@ -1262,7 +1452,7 @@
           <div class="receipt-box">
             <div class="receipt-row"><span>기본 대중교통 통학 보상</span><span>+${baseReward} P</span></div>
             <div class="receipt-row"><span>08시 이전 조기 도착(오프피크) 보너스</span><span>+${earlyBonus} P</span></div>
-            <div class="receipt-row"><span>거리 비례 가중치 (${calculatedDistKm}km × 50P)</span><span>+${distReward.toLocaleString()} P</span></div>
+            <div class="receipt-row"><span>거리 비례 가중치 (${calculatedDistKm}km)</span><span>+${distReward.toLocaleString()} P</span></div>
             <div class="receipt-row total"><span>최종 적립 마일리지</span><span>+${earnedPoints.toLocaleString()} P</span></div>
           </div>
         `;
@@ -1392,8 +1582,112 @@
       showToast("200명 가상 시뮬레이션 데이터가 갱신되었습니다.");
     }
 
+    // ================= [신설] 운영자 관제 대시보드 연동 함수 =================
+    async function loadAdminDashboard() {
+      try {
+        const res = await apiFetch('/api/admin/overview');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        document.getElementById('admTotalUsers').innerText = `${data.kpi.total_users}명`;
+        document.getElementById('admEarnCount').innerText = `${data.kpi.earn_count}건`;
+        document.getElementById('admBlockCount').innerText = `${data.kpi.block_count}건`;
+        document.getElementById('admTotalPoints').innerText = `${data.kpi.total_wallet_points.toLocaleString()} P`;
+        document.getElementById('admSpentSub').innerText = `누적 쿠폰 교환: ${data.kpi.total_spent_points.toLocaleString()} P`;
+
+        if (data.policy) {
+          document.getElementById('polMinDist').value = data.policy.min_distance_km;
+          document.getElementById('polMaxSpd').value = data.policy.max_speed_kmh;
+          document.getElementById('polBaseReward').value = data.policy.base_reward_p;
+          document.getElementById('polEarlyBonus').value = data.policy.early_bird_bonus_p;
+          document.getElementById('polDistRate').value = data.policy.distance_rate_p_per_km;
+        }
+
+        const usersTbody = document.getElementById('adminUsersTbody');
+        usersTbody.innerHTML = data.users.map(u => `
+          <tr>
+            <td style="font-weight:800;">${escapeHtml(u.user_id)}</td>
+            <td><b>${escapeHtml(u.name)}</b><br><span style="font-size:11px; color:var(--text-muted);">${escapeHtml(u.dept)}</span></td>
+            <td style="font-weight:800; color:var(--primary);">${u.wallet_balance.toLocaleString()} P</td>
+            <td>${u.total_distance} km (${u.early_count}회)</td>
+            <td><span class="tag ${u.registered_device_id === '미등록' ? 'tag-danger' : 'tag-success'}">${escapeHtml(u.registered_device_id)}</span></td>
+            <td>${escapeHtml(u.last_earn_date)}</td>
+            <td>
+              <button class="admin-action-btn" onclick="adminUserAction('${escapeHtml(u.user_id)}', 'RESET_DEVICE')">기기 초기화</button>
+              <button class="admin-action-btn" onclick="adminUserAction('${escapeHtml(u.user_id)}', 'CLEAR_DAILY')">1일제한 해제</button>
+              <button class="admin-action-btn" style="color:var(--success);" onclick="adminUserAction('${escapeHtml(u.user_id)}', 'GRANT_1000')">+1,000P 지급</button>
+              ${u.is_locked ? `<button class="admin-action-btn" style="color:var(--danger);" onclick="adminUserAction('${escapeHtml(u.user_id)}', 'UNLOCK_ACCOUNT')">잠금해제</button>` : ''}
+            </td>
+          </tr>
+        `).join('');
+
+        const logsTbody = document.getElementById('adminLogsTbody');
+        logsTbody.innerHTML = data.logs.length ? data.logs.map(l => {
+          const ok = l.log_type === 'EARN';
+          const isSpend = l.log_type === 'SPEND';
+          return `
+            <tr style="background: ${ok ? 'rgba(16,185,129,0.05)' : (isSpend ? 'transparent' : 'rgba(239,68,68,0.05)')};">
+              <td>${escapeHtml(l.created_at)}</td>
+              <td><b>${escapeHtml(l.user_name)}</b><br><span style="font-size:11px; color:var(--text-muted);">${escapeHtml(l.user_id)}</span></td>
+              <td>${escapeHtml(l.origin_label)}</td>
+              <td>${escapeHtml(l.distance_km)}km (${escapeHtml(l.speed_kmh)}km/h)</td>
+              <td><span class="tag ${ok ? 'tag-success' : 'tag-danger'}">${escapeHtml(l.status)}</span></td>
+              <td>${escapeHtml(l.description)}</td>
+              <td style="font-weight:800; color:${ok ? 'var(--success)' : (isSpend ? 'var(--danger)' : 'var(--text-muted)')};">${ok ? '+' : ''}${l.points.toLocaleString()} P</td>
+            </tr>
+          `;
+        }).join('') : `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted);">기록된 감사 로그가 없습니다.</td></tr>`;
+      } catch (e) {}
+    }
+
+    async function saveAdminPolicy() {
+      try {
+        const minDist = parseFloat(document.getElementById('polMinDist').value);
+        const maxSpd = parseFloat(document.getElementById('polMaxSpd').value);
+        const baseReward = parseInt(document.getElementById('polBaseReward').value, 10);
+        const earlyBonus = parseInt(document.getElementById('polEarlyBonus').value, 10);
+        const distRate = parseInt(document.getElementById('polDistRate').value, 10);
+
+        const res = await apiFetch('/api/admin/policy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            min_distance_km: minDist,
+            max_speed_kmh: maxSpd,
+            base_reward_p: baseReward,
+            early_bird_bonus_p: earlyBonus,
+            distance_rate_p_per_km: distRate
+          })
+        });
+        if (res.ok) {
+          walkRestrictionCircle.setRadius(minDist * 1000);
+          showToast(`운영자 정책 반영 완료! (도보차단 ${minDist}km / 기본 ${baseReward}P)`);
+          loadAdminDashboard();
+        }
+      } catch (e) {}
+    }
+
+    async function adminUserAction(userId, action) {
+      try {
+        const res = await apiFetch('/api/admin/user/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, action: action })
+        });
+        const d = await res.json();
+        if (res.ok) {
+          showToast(d.message);
+          loadAdminDashboard();
+          syncWalletFromServer();
+          loadLogs();
+        } else {
+          showToast(d.reason || '제어 요청 실패');
+        }
+      } catch (e) {}
+    }
+
     function switchTab(tabId) {
-      const tabs = ['commute', 'analytics', 'wallet', 'shop', 'guide'];
+      const tabs = ['commute', 'analytics', 'wallet', 'shop', 'guide', 'admin'];
       const index = tabs.indexOf(tabId);
 
       document.querySelectorAll('.nav-item').forEach((item, idx) => item.classList.toggle('active', idx === index));
@@ -1405,6 +1699,7 @@
 
       if (tabId === 'commute') setTimeout(() => map.invalidateSize(), 120);
       if (tabId === 'analytics') setTimeout(() => initCharts(), 80);
+      if (tabId === 'admin') loadAdminDashboard();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -1472,7 +1767,7 @@
       }
     }
 
-    // ================= 로그인 / 세션 =================
+    // ================= 로그인 / 세션 (서버 Sleep 후 자동 계정 복구 포함) =================
     async function apiFetch(url, options = {}) {
       const res = await fetch(url, { credentials: 'same-origin', ...options });
       if (res.status === 401) {
@@ -1493,6 +1788,10 @@
       document.getElementById('authScreen').classList.remove('hidden');
       setAuthError(message || '');
       document.getElementById('authPassword').value = '';
+      const lastId = localStorage.getItem('ptu_last_student_id');
+      if (lastId && document.getElementById('authStudentId')) {
+        document.getElementById('authStudentId').value = lastId;
+      }
     }
 
     function setAuthError(message) {
@@ -1539,13 +1838,31 @@
       const btn = document.getElementById('authSubmit');
       btn.disabled = true;
       try {
-        const data = authMode === 'login'
-          ? await postAuth('/api/auth/login', { student_id: studentId, password })
-          : await postAuth('/api/auth/signup', {
-              student_id: studentId, password,
-              name: document.getElementById('authName').value.trim(),
-              dept: document.getElementById('authDept').value.trim()
-            });
+        let data;
+        if (authMode === 'login') {
+          try {
+            data = await postAuth('/api/auth/login', { student_id: studentId, password });
+          } catch (loginErr) {
+            // 서버가 잠들어서(Sleep) DB가 초기화된 경우 로컬 백업으로 자동 복원 시도
+            const backup = getAccountBackup(studentId);
+            if (backup && backup.password === password) {
+              data = await postAuth('/api/auth/restore', backup);
+              showToast("서버 절전 복구: 기존 가입 계정이 자동 복원되었습니다.");
+            } else {
+              throw loginErr;
+            }
+          }
+          saveAccountBackup(studentId, password, data.user.name, data.user.dept, data.user.balance);
+        } else {
+          const nameVal = document.getElementById('authName').value.trim();
+          const deptVal = document.getElementById('authDept').value.trim() || '정보통신학과';
+          data = await postAuth('/api/auth/signup', {
+            student_id: studentId, password,
+            name: nameVal,
+            dept: deptVal
+          });
+          saveAccountBackup(studentId, password, nameVal, deptVal, 0, 0);
+        }
         onLoggedIn(data.user, authMode === 'signup');
       } catch (e) {
         setAuthError(e.message);
@@ -1579,7 +1896,7 @@
     function onLoggedIn(user, isNew) {
       currentUser = user;
       document.querySelectorAll('.js-user-name').forEach(el => el.textContent = user.name);
-      document.getElementById('resetDemoBtn').style.display = user.student_id === DEMO_ID ? '' : 'none';
+      document.getElementById('resetDemoBtn').style.display = '';
       document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('authForm').reset();
       setAuthError('');
