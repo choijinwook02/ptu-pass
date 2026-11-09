@@ -2,8 +2,9 @@ import os
 import math
 import random
 import sqlite3
-from flask import Flask, request, jsonify, send_from_directory, g
+from flask import Flask, request, jsonify, send_from_directory, g, session
 from flask_cors import CORS
+from werkzeug.security import generate_password_hash
 
 import auth
 from auth import login_required
@@ -15,8 +16,22 @@ CORS(app)
 db.init_app(app)
 auth.init_app(app)
 
+# 서버가 절전(Sleep) 후 재기동되어도 로그인 세션 쿠키가 풀리지 않도록 고정 키 설정
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'ptu-commute-pass-fixed-secret-key-2026')
+
 PTU_GATE_LAT = 36.9961
 PTU_GATE_LON = 127.1328
+
+# 운영자 대시보드에서 실시간으로 변경 가능한 교차 검증 정책 파라미터
+POLICY_CONFIG = {
+    "min_distance_km": 1.0,
+    "min_speed_kmh": 5.0,
+    "max_speed_kmh": 150.0,
+    "base_reward_p": 300,
+    "early_bird_cutoff_hour": 8,
+    "early_bird_bonus_p": 200,
+    "distance_rate_p_per_km": 50
+}
 
 COUPON_CATALOG = [
     {"id": "CAFE_3000", "name": "교내 카페 3,000원 음료 교환권", "cost": 3000, "category": "CAFE"},
@@ -27,7 +42,7 @@ COUPONS_BY_ID = {c["id"]: c for c in COUPON_CATALOG}
 
 db.init_db(app.config['DB_PATH'], demo_password_hash=auth.demo_password_hash())
 
-# db.py를 직접 수정하지 않고도 기기 식별 및 1일 1회 제한용 컬럼을 안전하게 추가
+# 서버가 잠들었다 깨어나도(Sleep -> Wake) 기본 학번 계정과 보안 컬럼이 항상 유지되도록 보장
 def ensure_security_columns(db_path):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -39,6 +54,21 @@ def ensure_security_columns(db_path):
             cursor.execute(col_sql)
         except sqlite3.OperationalError:
             pass
+
+    now_str = get_kst_now().strftime("%Y-%m-%d %H:%M")
+    default_pw_hash = generate_password_hash("12345678")
+    permanent_users = [
+        ("2021143024", "서우림", "정보통신학과", default_pw_hash, 7500, 112.5, 4, now_str),
+        ("2026000001", "시연 자료 팀", "정보통신학과", default_pw_hash, 7500, 112.5, 4, now_str),
+        ("9999999999", "캠퍼스 관리자", "운영관리팀", default_pw_hash, 15000, 140.0, 6, now_str),
+    ]
+    for u in permanent_users:
+        cursor.execute(
+            """INSERT OR IGNORE INTO USERS
+               (user_id, name, dept, password_hash, wallet_balance, total_distance, early_count, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            u
+        )
     conn.commit()
     conn.close()
 
@@ -64,7 +94,7 @@ def health_check():
         "status": "ONLINE",
         "team": "시연 자료 팀",
         "kst_time": get_kst_now().strftime("%Y-%m-%d %H:%M:%S"),
-        "engine_version": "v2.6-TDM-Security"
+        "engine_version": "v2.7-TDM-Admin-Suite"
     })
 
 # [API 3] 전자지갑 잔액, 누적 통학 실적 및 기기·적립일 상태 조회
@@ -105,10 +135,15 @@ def verify_commute():
 
     kst_now = get_kst_now()
     today_str = kst_now.strftime("%Y-%m-%d")
-    is_early_mode = data.get('is_early', kst_now.hour < 8)
+    cutoff_hr = int(POLICY_CONFIG["early_bird_cutoff_hour"])
+    is_early_mode = data.get('is_early', kst_now.hour < cutoff_hr)
 
     distance_km = calculate_distance(start_lat, start_lon, end_lat, end_lon)
     speed_kmh = float(data.get('speed_kmh', (distance_km / (duration_minutes / 60)) if duration_minutes > 0 else 0))
+
+    min_dist = float(POLICY_CONFIG["min_distance_km"])
+    min_spd = float(POLICY_CONFIG["min_speed_kmh"])
+    max_spd = float(POLICY_CONFIG["max_speed_kmh"])
 
     conn = get_db()
     cursor = conn.cursor()
@@ -144,8 +179,8 @@ def verify_commute():
         return jsonify({"status": "REJECTED", "badge": "중복적립 차단", "reason": reason})
 
     # 1. GPS 스푸핑(위치 변조) 차단
-    if speed_kmh > 150.0:
-        reason = f"비정상 이동 속도({round(speed_kmh, 1)}km/h) 감지 — GPS 스푸핑(Mock Location) 차단"
+    if speed_kmh > max_spd:
+        reason = f"비정상 이동 속도({round(speed_kmh, 1)}km/h > 상한 {max_spd}km/h) 감지 — GPS 스푸핑 차단"
         cursor.execute(
             "INSERT INTO COMMUTE_LOGS (user_id, log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (g.user_id, 'BLOCK_SPOOF', origin_label, round(distance_km, 2), round(speed_kmh, 1), '스푸핑 차단', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
@@ -163,9 +198,9 @@ def verify_commute():
         conn.commit()
         return jsonify({"status": "REJECTED", "badge": "지급 거부", "reason": reason})
 
-    # 3. 1.0km 미만 단거리 도보 통학 차단
-    if speed_kmh < 5.0 or distance_km < 1.0:
-        reason = f"평택대 정문까지 {round(distance_km, 2)}km (1.0km 미만 기숙사·인근 도보 통학 레드존 차단)"
+    # 3. 단거리 도보 통학 차단
+    if speed_kmh < min_spd or distance_km < min_dist:
+        reason = f"평택대 정문까지 {round(distance_km, 2)}km ({min_dist}km 미만 기숙사·인근 도보 통학 레드존 차단)"
         cursor.execute(
             "INSERT INTO COMMUTE_LOGS (user_id, log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (g.user_id, 'BLOCK_WALK', origin_label, round(distance_km, 2), round(speed_kmh, 1), '지급 거부', reason, 0, kst_now.strftime("%Y-%m-%d %H:%M"))
@@ -173,10 +208,11 @@ def verify_commute():
         conn.commit()
         return jsonify({"status": "REJECTED", "badge": "지급 거부", "reason": reason})
 
-    # 4. 정상 승인 및 동적 마일리지 산출
-    base_reward = 300
-    early_bonus = 200 if is_early_mode else 0
-    distance_reward = int(round(distance_km * 50))
+    # 4. 정상 승인 및 동적 마일리지 산출 (운영자 설정 정책값 연동)
+    base_reward = int(POLICY_CONFIG["base_reward_p"])
+    early_bonus = int(POLICY_CONFIG["early_bird_bonus_p"]) if is_early_mode else 0
+    dist_rate = int(POLICY_CONFIG["distance_rate_p_per_km"])
+    distance_reward = int(round(distance_km * dist_rate))
     total_reward = base_reward + early_bonus + distance_reward
     reason = f"본인 기기({reg_device_id}) · 실제 거리 {round(distance_km, 2)}km · 대중교통 결제 교차 검증 일치"
 
@@ -245,13 +281,11 @@ def exchange_coupon():
 @app.route('/api/reset', methods=['POST'])
 @login_required
 def reset_wallet():
-    if g.user_id != DEMO_USER_ID:
-        return jsonify({"status": "FAILED", "reason": "시연 데이터 초기화는 데모 계정에서만 가능합니다."}), 403
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
         "UPDATE USERS SET wallet_balance = ?, total_distance = ?, early_count = ?, last_earn_date = '' WHERE user_id = ?",
-        (DEMO_INITIAL["wallet_balance"], DEMO_INITIAL["total_distance"], DEMO_INITIAL["early_count"], DEMO_USER_ID)
+        (DEMO_INITIAL["wallet_balance"], DEMO_INITIAL["total_distance"], DEMO_INITIAL["early_count"], g.user_id)
     )
     cursor.execute("DELETE FROM COMMUTE_LOGS WHERE user_id = ?", (g.user_id,))
     conn.commit()
@@ -290,7 +324,7 @@ def get_fraud_stats():
         "block_accuracy": 98.5
     })
 
-# [API 10] 실용적 통학 편익 지표 (정류장 대기시간 단축 및 식비·교통비 환급 혜택)
+# [API 10] 실용적 통학 편익 지표
 @app.route('/api/stats/benefit', methods=['GET'])
 @login_required
 def get_practical_benefit():
@@ -326,7 +360,7 @@ def get_department_leaderboard():
 @app.route('/api/transit/stops', methods=['GET'])
 def get_transit_stops():
     return jsonify({
-        "campus_gate": {"name": "평택대학교 정문 (기준점)", "lat": PTU_GATE_LAT, "lon": PTU_GATE_LON, "walk_limit_km": 1.0},
+        "campus_gate": {"name": "평택대학교 정문 (기준점)", "lat": PTU_GATE_LAT, "lon": PTU_GATE_LON, "walk_limit_km": POLICY_CONFIG["min_distance_km"]},
         "hubs": [
             {"name": "평택역 광역환승센터", "lat": 36.9907, "lon": 127.0851, "line": "1호선 / 시내버스 20·50번"},
             {"name": "평택지제역 SRT·1호선", "lat": 37.0188, "lon": 127.0704, "line": "SRT / 광역·시내 노선"},
@@ -363,16 +397,163 @@ def get_coupons_catalog():
 @app.route('/api/system/spec', methods=['GET'])
 def get_system_spec():
     return jsonify({
-        "min_distance_km": 1.0,
-        "min_speed_kmh": 5.0,
-        "max_speed_kmh": 150.0,
+        **POLICY_CONFIG,
         "daily_limit": "1일 1회 적립 제한",
-        "device_binding": "UUID 단말기 고유 식별 대리출석 방지",
-        "base_reward_p": 300,
-        "early_bird_cutoff_hour": 8,
-        "early_bird_bonus_p": 200,
-        "distance_rate_p_per_km": 50
+        "device_binding": "UUID 단말기 고유 식별 대리출석 방지"
     })
+
+# ================= [신설] 서버 절전(Sleep) 후 계정 자동 복구 API =================
+# [API 16] 클라이언트 로컬 백업 기반 회원 정보 자동 복원 (Render 무료 서버 초기화 대응)
+@app.route('/api/auth/restore', methods=['POST'])
+def restore_user_account():
+    data = request.get_json(silent=True) or {}
+    student_id = str(data.get("student_id", "")).strip()
+    password = str(data.get("password", ""))
+    name = str(data.get("name", "학우")).strip() or "학우"
+    dept = str(data.get("dept", "정보통신학과")).strip() or "정보통신학과"
+    balance = int(data.get("balance", 0))
+    total_distance = float(data.get("total_distance", 0.0))
+
+    if not student_id or len(password) < 8:
+        return jsonify({"status": "FAILED", "reason": "복구 정보가 올바르지 않습니다."}), 400
+
+    conn = get_db()
+    existing = conn.execute("SELECT * FROM USERS WHERE user_id = ?", (student_id,)).fetchone()
+    if existing is None:
+        conn.execute(
+            """INSERT INTO USERS (user_id, name, dept, password_hash, wallet_balance, total_distance, early_count, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (student_id, name, dept, generate_password_hash(password), balance, total_distance, 1, get_kst_now().strftime("%Y-%m-%d %H:%M"))
+        )
+        conn.commit()
+    session.clear()
+    session["user_id"] = student_id
+    row = conn.execute("SELECT * FROM USERS WHERE user_id = ?", (student_id,)).fetchone()
+    return jsonify({
+        "status": "RESTORED",
+        "user": {
+            "student_id": row["user_id"],
+            "name": row["name"],
+            "dept": row["dept"],
+            "balance": row["wallet_balance"]
+        }
+    })
+
+# ================= [신설] 운영자 관제 대시보드 전용 REST API =================
+# [API 17] 운영자 통합 관제 현황 (전체 회원·전체 로그·KPI·정책값 조회)
+@app.route('/api/admin/overview', methods=['GET'])
+@login_required
+def admin_overview():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT user_id, name, dept, wallet_balance, total_distance, early_count,
+               registered_device_id, last_earn_date, failed_logins, locked_until, created_at
+        FROM USERS ORDER BY created_at DESC, user_id ASC
+    """)
+    users = [{
+        "user_id": r[0],
+        "name": r[1],
+        "dept": r[2] or "미지정",
+        "wallet_balance": r[3],
+        "total_distance": round(r[4], 1),
+        "early_count": r[5],
+        "registered_device_id": r[6] or "미등록",
+        "last_earn_date": r[7] or "-",
+        "failed_logins": r[8] or 0,
+        "is_locked": bool(r[9]),
+        "created_at": r[10] or "-"
+    } for r in cursor.fetchall()]
+
+    cursor.execute("""
+        SELECT L.id, L.user_id, U.name, L.log_type, L.origin_label, L.distance_km,
+               L.speed_kmh, L.status, L.description, L.points, L.created_at
+        FROM COMMUTE_LOGS L
+        LEFT JOIN USERS U ON L.user_id = U.user_id
+        ORDER BY L.id DESC LIMIT 30
+    """)
+    logs = [{
+        "id": r[0],
+        "user_id": r[1],
+        "user_name": r[2] or r[1],
+        "log_type": r[3],
+        "origin_label": r[4],
+        "distance_km": r[5],
+        "speed_kmh": r[6],
+        "status": r[7],
+        "description": r[8],
+        "points": r[9],
+        "created_at": r[10]
+    } for r in cursor.fetchall()]
+
+    total_earned = conn.execute("SELECT COALESCE(SUM(points), 0) FROM COMMUTE_LOGS WHERE log_type = 'EARN'").fetchone()[0]
+    total_spent = conn.execute("SELECT COALESCE(SUM(ABS(points)), 0) FROM COMMUTE_LOGS WHERE log_type = 'SPEND'").fetchone()[0]
+    earn_count = conn.execute("SELECT COUNT(*) FROM COMMUTE_LOGS WHERE log_type = 'EARN'").fetchone()[0]
+    block_count = conn.execute("SELECT COUNT(*) FROM COMMUTE_LOGS WHERE log_type LIKE 'BLOCK_%'").fetchone()[0]
+
+    return jsonify({
+        "kpi": {
+            "total_users": len(users),
+            "earn_count": earn_count,
+            "block_count": block_count,
+            "total_wallet_points": sum(u["wallet_balance"] for u in users),
+            "total_earned_points": total_earned,
+            "total_spent_points": total_spent
+        },
+        "policy": POLICY_CONFIG,
+        "users": users,
+        "logs": logs
+    })
+
+# [API 18] 운영자 검증 정책 파라미터 실시간 변경
+@app.route('/api/admin/policy', methods=['POST'])
+@login_required
+def admin_update_policy():
+    data = request.get_json(silent=True) or {}
+    for key in ["min_distance_km", "min_speed_kmh", "max_speed_kmh"]:
+        if key in data:
+            POLICY_CONFIG[key] = round(float(data[key]), 2)
+    for key in ["base_reward_p", "early_bird_cutoff_hour", "early_bird_bonus_p", "distance_rate_p_per_km"]:
+        if key in data:
+            POLICY_CONFIG[key] = int(data[key])
+    return jsonify({"status": "SUCCESS", "policy": POLICY_CONFIG})
+
+# [API 19] 운영자 회원 개별 제어 (기기 UUID 초기화, 1일 제한 해제, 포인트 지급, 계정 잠금 해제)
+@app.route('/api/admin/user/action', methods=['POST'])
+@login_required
+def admin_user_action():
+    data = request.get_json(silent=True) or {}
+    target_id = str(data.get("user_id", "")).strip()
+    action = str(data.get("action", "")).strip()
+
+    conn = get_db()
+    row = conn.execute("SELECT user_id, name, wallet_balance FROM USERS WHERE user_id = ?", (target_id,)).fetchone()
+    if row is None:
+        return jsonify({"status": "FAILED", "reason": "대상 회원을 찾을 수 없습니다."}), 404
+
+    now_str = get_kst_now().strftime("%Y-%m-%d %H:%M")
+    if action == "RESET_DEVICE":
+        conn.execute("UPDATE USERS SET registered_device_id = '' WHERE user_id = ?", (target_id,))
+        msg = f"[{row['name']}] 단말기 고유 식별값(UUID) 바인딩이 초기화되었습니다."
+    elif action == "CLEAR_DAILY":
+        conn.execute("UPDATE USERS SET last_earn_date = '' WHERE user_id = ?", (target_id,))
+        msg = f"[{row['name']}] 금일 1일 1회 적립 제한이 해제되었습니다."
+    elif action == "UNLOCK_ACCOUNT":
+        conn.execute("UPDATE USERS SET failed_logins = 0, locked_until = NULL WHERE user_id = ?", (target_id,))
+        msg = f"[{row['name']}] 로그인 실패 잠금이 해제되었습니다."
+    elif action == "GRANT_1000":
+        conn.execute("UPDATE USERS SET wallet_balance = wallet_balance + 1000 WHERE user_id = ?", (target_id,))
+        conn.execute(
+            "INSERT INTO COMMUTE_LOGS (user_id, log_type, origin_label, distance_km, speed_kmh, status, description, points, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (target_id, 'EARN', '운영자 관제 센터', 0, 0, '관리자 지급', '운영자 수동 마일리지 지급 (+1,000P)', 1000, now_str)
+        )
+        msg = f"[{row['name']}] 회원에게 +1,000 P가 즉시 지급되었습니다."
+    else:
+        return jsonify({"status": "FAILED", "reason": "지원하지 않는 제어 명령입니다."}), 400
+
+    conn.commit()
+    return jsonify({"status": "SUCCESS", "message": msg})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
